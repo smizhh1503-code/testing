@@ -1,0 +1,2589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161d25">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Field Kit: nine engineering measurements from the sensors already in your phone.">
+<title>Field Kit</title>
+<script>try{document.documentElement.dataset.palette=(localStorage.getItem("fieldkit.theme")==="day")?"day":"night";}catch(e){document.documentElement.dataset.palette="night";}</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 fill=%22%23e4f01e%22/%3E%3Crect y=%2226%22 width=%2264%22 height=%2212%22 fill=%22%23c9cdd2%22/%3E%3Crect y=%2224%22 width=%2264%22 height=%223%22 fill=%22%2314181f%22/%3E%3Crect y=%2237%22 width=%2264%22 height=%223%22 fill=%22%2314181f%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  color-scheme: light;
+  /* surfaces */
+  --ground:#f3f4f1; --card:#ffffff; --shell:#e4f01e; --on-shell:#14181f; --shell-line:#14181f;
+  /* accent (Start, icon tiles, highlights) */
+  --hv:#e4f01e; --on-hv:#14181f; --zone:rgba(228,240,30,.5); --qr-bg:#e4f01e;
+  /* text, rules and solid fills */
+  --ink:#14181f; --muted:#4b535f; --grid:#e3e5e1; --line:#14181f; --fill:#14181f; --on-fill:#e4f01e; --casing:#14181f;
+  /* the reflective band */
+  --silver:#c9cdd2; --silver2:#dadde1; --silver3:#b3b8be; --band-ink:#14181f; --ghost:rgba(20,24,31,.13); --track:rgba(20,24,31,.12); --sheen:rgba(255,255,255,.8);
+  /* status */
+  --alert:#ff5a1f; --on-alert:#14181f; --over:rgba(255,90,31,.14); --pass:#16833a; --on-pass:#ffffff;
+  /* action dock */
+  --dock:#14181f; --on-dock:#ffffff; --dock-muted:#8d949e; --dock-off:#4b535f; --go-off:#59605e; --go-off-ink:#c9cdd2; --wait1:#2b3038; --wait2:#3a414b;
+  /* comfort ramp (single-hue ordinal, validated) */
+  --b0:#eea064; --b1:#e6803f; --b2:#d9612a; --b3:#bf4520; --b4:#9a2e1a; --b5:#6e1b13;
+  --cond:"Barlow Condensed","Arial Narrow",sans-serif;
+  --sans:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+/* Night Shift theme (default); :root above is Day (Hi-Vis Yellow) */
+:root[data-palette="night"]{color-scheme:dark;--ground:#0e1318;--card:#161d25;--shell:#161d25;--on-shell:#e4f01e;--shell-line:#e4f01e;--hv:#e4f01e;--on-hv:#0e1318;--zone:rgba(228,240,30,.20);--qr-bg:#ffffff;--ink:#e8ecf0;--muted:#9aa7b4;--grid:#26313d;--line:#5f6d7c;--fill:#e4f01e;--on-fill:#0e1318;--casing:#0e1318;--silver:#c9cdd2;--silver2:#dadde1;--silver3:#b3b8be;--band-ink:#0e1318;--ghost:rgba(14,19,24,.16);--track:rgba(14,19,24,.15);--sheen:rgba(255,255,255,.85);--alert:#ff6a2b;--on-alert:#0e1318;--over:rgba(255,106,43,.16);--pass:#33b35f;--on-pass:#0e1318;--dock:#080b0f;--on-dock:#e8ecf0;--dock-muted:#7d8995;--dock-off:#3b4756;--go-off:#2a333d;--go-off-ink:#7d8995;--wait1:#1e252e;--wait2:#2b343f;--b0:#f7c99c;--b1:#f3aa70;--b2:#ee8b4b;--b3:#e2692e;--b4:#cc5121;--b5:#ad3d1a}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scrollbar-color:var(--ink) var(--ground)}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.45 var(--sans);-webkit-tap-highlight-color:transparent}
+::selection{background:var(--hv);color:var(--on-hv)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+a{color:var(--ink);text-underline-offset:3px}
+button{font-family:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;border-radius:0}
+input{accent-color:var(--ink);font-family:inherit;color:var(--ink)}
+.hide{display:none!important}
+.app{max-width:640px;margin:0 auto;background:var(--ground);min-height:100vh}
+
+/* ---------- screens ---------- */
+.screen{display:none;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.screen.on{display:block}
+#kit.screen{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+
+/* ---------- kit home ---------- */
+.home{background:var(--shell);color:var(--on-shell);padding:calc(env(safe-area-inset-top) + 30px) 16px 18px;border-bottom:4px solid var(--shell-line)}
+.home h1{font:800 60px/.88 var(--cond);text-transform:uppercase;letter-spacing:-.01em;margin:0}
+.home .deck{font:600 18px/1.35 var(--sans);margin:12px 0 0;max-width:30ch}
+.tape{height:16px;background:repeating-linear-gradient(90deg,var(--silver) 0 6px,var(--silver2) 6px 12px);border-bottom:3px solid var(--line);color:var(--band-ink)}
+ul.tools{list-style:none;margin:0;padding:0;background:var(--card)}
+ul.tools li:last-child{border-bottom:0}
+ul.tools li{border-bottom:2px solid var(--line)}
+ul.tools a{display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center;padding:14px 16px;text-decoration:none;min-height:84px;transition:background-color .15s ease-out}
+ul.tools a:active{background:var(--ground)}
+.ticon{width:48px;height:48px;display:grid;place-items:center;background:var(--hv);color:var(--on-hv);border:2px solid var(--line)}
+.ticon svg{width:28px;height:28px}
+.tname{font:800 23px/1 var(--cond);text-transform:uppercase;letter-spacing:.01em}
+.tq{display:block;font:400 14.5px/1.35 var(--sans);color:var(--muted);margin-top:4px}
+.tside{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tside .sens{font:700 12px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tside svg{width:18px;height:18px}
+.livetag{display:inline-flex;align-items:center;gap:5px;font:800 12px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;background:var(--fill);color:var(--on-fill);padding:6px 8px}
+.livetag i{width:8px;height:8px;background:var(--alert)}
+.about{padding:18px 16px 0}
+.about h2{font:800 22px/1.1 var(--cond);text-transform:uppercase;margin:18px 0 6px}
+.about p,.about li{font-size:15px;max-width:62ch}
+.about ul{padding-left:20px;margin:0 0 10px}
+.credit{font:600 14px var(--sans);color:var(--muted);border-top:2px solid var(--line);margin-top:18px;padding-top:12px}
+
+/* ---------- day / night switch ---------- */
+.home{position:relative}
+.theme{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:16px;display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--on-shell)}
+.theme button{min-height:44px;min-width:64px;border:0;background:transparent;color:var(--on-shell);display:flex;align-items:center;justify-content:center;gap:5px;font:800 13px var(--cond);text-transform:uppercase;letter-spacing:.06em;padding:0 10px}
+.theme button svg{width:16px;height:16px}
+.theme button[aria-pressed="true"]{background:var(--on-shell);color:var(--shell)}
+.side .theme{position:static;width:max-content;margin-top:18px}
+/* ---------- kit dashboard ---------- */
+.tape{position:relative;overflow:hidden;height:auto;padding:7px 16px;font:800 13px/1 var(--cond);text-transform:uppercase;letter-spacing:.08em;display:flex;gap:14px;flex-wrap:wrap}
+.tape span{position:relative;z-index:1}
+.tape.flash::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,var(--sheen) 48%,var(--sheen) 52%,transparent 70%);transform:translateX(-110%);animation:sheen 1.6s cubic-bezier(.16,1,.3,1) .35s 1 forwards}
+.grp{font:800 15px/1 var(--cond);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;padding:18px 16px 8px;background:var(--ground);border-bottom:2px solid var(--line)}
+.tnote{display:block;margin-top:6px;font:700 13px/1.2 var(--cond);text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
+.tnote:empty{display:none}
+.tnote::before{content:"";display:inline-block;width:9px;height:9px;background:var(--fill);margin-right:6px;vertical-align:0}
+/* ---------- wide screens: phone-first app plus a QR side panel ---------- */
+.side{display:none}
+@media (min-width:1000px){
+  body{background:var(--dock)}
+  :root{--off:max(0px,calc((100vw - 1100px)/2))}
+  .side{display:flex;flex-direction:column;justify-content:space-between;position:fixed;left:var(--off);top:0;bottom:0;width:380px;padding:40px 36px;background:var(--shell);color:var(--on-shell);border-right:4px solid var(--shell-line);z-index:2000}
+  .side h2{font:800 64px/.88 var(--cond);text-transform:uppercase;margin:0}
+  .side p{font:600 17px/1.4 var(--sans);margin:14px 0 0;max-width:28ch}
+  .side .qr{background:var(--qr-bg);border:3px solid var(--on-shell);padding:14px;width:max-content;margin-top:22px}
+  .side .qr img,.side .qr canvas{display:block;width:200px;height:200px}
+  .side .qrcap{font:800 14px var(--cond);text-transform:uppercase;letter-spacing:.06em;margin-top:10px}
+  .side .url{font:600 13px var(--sans);word-break:break-all;margin-top:6px;color:var(--on-shell)}
+  .side .foot{font:600 13px var(--sans);border-top:2px solid var(--on-shell);padding-top:12px}
+  .app{margin:0 0 0 calc(var(--off) + 420px);max-width:640px;box-shadow:0 0 0 4px var(--shell-line)}
+  body .actions{left:calc(var(--off) + 420px);right:auto;width:640px}
+}
+/* ---------- tool header ---------- */
+header.top{position:sticky;top:0;z-index:1000;background:var(--shell);color:var(--on-shell);border-bottom:4px solid var(--shell-line);padding:calc(env(safe-area-inset-top) + 6px) 12px 8px 4px;display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+.back{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:0 6px 0 2px;font:800 16px var(--cond);text-transform:uppercase;letter-spacing:.04em;text-decoration:none}
+.back svg{width:26px;height:26px}
+header.top h1{font:800 28px/1 var(--cond);text-transform:uppercase;margin:0;letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sens-tag{font:700 12px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;border:2px solid currentColor;padding:6px 8px;white-space:nowrap}
+
+/* ---------- the reflective band (signature) ---------- */
+.band{position:relative;overflow:hidden;margin-top:16px;background:repeating-linear-gradient(90deg,var(--silver) 0 6px,var(--silver2) 6px 12px);border-top:3px solid var(--band-ink);border-bottom:3px solid var(--band-ink);color:var(--band-ink);padding:12px 16px 8px}
+.band .row{display:flex;align-items:center;gap:8px;font:800 15px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;position:relative;z-index:1}
+.mark{width:16px;height:16px;border:3px solid var(--band-ink);flex:none}
+.band[data-state="rec"] .mark{background:var(--band-ink)}
+.band[data-state="alert"] .mark{background:var(--alert)}
+.band[data-state="done"] .mark{background:var(--band-ink);box-shadow:inset 0 0 0 3px var(--silver2)}
+.band .val{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative;z-index:1}
+.band .num{font:800 96px/.92 var(--cond);font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap}
+.band .num.empty{color:var(--ghost)}
+.band .unit{font:800 17px/1.1 var(--cond);text-transform:uppercase;letter-spacing:.04em;text-align:right}
+.band[data-state="rec"]::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,var(--sheen) 48%,var(--sheen) 52%,transparent 70%);transform:translateX(-110%);animation:sheen 2.4s cubic-bezier(.16,1,.3,1) infinite}
+@keyframes sheen{to{transform:translateX(110%)}}
+.meaning{margin:12px 16px 0;font:600 17px/1.35 var(--sans)}
+.verdict{display:inline-flex;align-items:center;gap:8px;font:800 16px/1 var(--cond);text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;background:var(--fill);color:var(--on-fill)}
+.verdict.pass{background:var(--pass);color:var(--on-pass)}
+.verdict.fail{background:var(--alert);color:var(--on-alert)}
+.verdict svg{width:16px;height:16px}
+
+/* ---------- progress & loading (filling bar when the wait is known, hazard tape when it isn't) ---------- */
+.bprog{position:absolute;left:0;right:0;bottom:0;height:7px;z-index:2;pointer-events:none;opacity:0;transition:opacity .2s ease-out;background:var(--track)}
+.bprog.on{opacity:1}
+.bprog i{display:block;height:100%;width:0;background:var(--band-ink);transition:width .12s linear}
+.bprog.indef i,.hazard{width:100%!important;background:repeating-linear-gradient(-45deg,var(--band-ink) 0 8px,var(--hv) 8px 16px);background-size:22.63px 22.63px;animation:hazard .7s linear infinite}
+@keyframes hazard{to{background-position:22.63px 0}}
+.go.wait{background:repeating-linear-gradient(-45deg,var(--wait1) 0 8px,var(--wait2) 8px 16px);background-size:22.63px 22.63px;animation:hazard .7s linear infinite;color:var(--hv);opacity:1!important}
+.maploading{position:absolute;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--ground);font:800 15px var(--cond);text-transform:uppercase;letter-spacing:.06em;transition:opacity .3s ease-out}
+.maploading i{display:block;width:140px;height:10px;border:2px solid var(--line)}
+.maploading.gone{opacity:0;pointer-events:none}
+/* ---------- dock: live reading stays in reach while you scroll ---------- */
+.actions .mini{display:none;width:100%;max-width:608px;margin:0 auto 8px;align-items:center;gap:8px;padding:6px 10px;border:0;background:repeating-linear-gradient(90deg,var(--silver) 0 6px,var(--silver2) 6px 12px);color:var(--band-ink);text-align:left;cursor:pointer}
+.actions .mini .mark{width:13px;height:13px;border-width:2.5px}
+.actions .mini[data-state="rec"] .mark{background:var(--band-ink)}
+.actions .mini[data-state="alert"] .mark{background:var(--alert)}
+.actions .mini[data-state="done"] .mark{background:var(--band-ink);box-shadow:inset 0 0 0 2px var(--silver2)}
+.actions .mini .ml{flex:1;min-width:0;font:800 13px/1.1 var(--cond);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions .mini .mn{font:800 30px/1 var(--cond);font-variant-numeric:tabular-nums}
+.actions .mini .mn.empty{color:var(--ghost)}
+.actions .mini .mu{font:800 12px/1.05 var(--cond);text-transform:uppercase;max-width:76px}
+.actions .mini svg{width:18px;height:18px;flex:none}
+.screen.band-off .actions .mini{display:flex}
+.actions button{transition:min-height .2s ease-out,transform .1s ease-out}
+.screen.band-off .actions .in button{min-height:46px}
+/* ---------- content blocks ---------- */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2px solid var(--line);background:var(--card);margin:14px 16px 0}
+.tiles>div{padding:8px 10px 9px;border-right:2px solid var(--line);min-width:0}
+.tiles>div:last-child{border-right:0}
+.tiles b{display:block;font:800 30px/1.05 var(--cond);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tiles span{display:block;font:600 12px/1.25 var(--sans);text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.card{background:var(--card);border:2px solid var(--line);margin:14px 16px 0;padding:12px 12px 10px}
+.card h2{font:800 17px/1.2 var(--cond);text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px}
+.cap{font:400 14px/1.4 var(--sans);color:var(--muted);margin:0 0 8px}
+.status{font:500 14px/1.4 var(--sans);color:var(--muted);margin:10px 16px 0;min-height:1.4em}
+.status b{color:var(--ink)}
+.warnbox{background:var(--alert);color:var(--on-alert);font:600 15px/1.4 var(--sans);padding:12px 16px;border-bottom:3px solid var(--line)}
+canvas{display:block;width:100%}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--line);margin:14px 16px 0;background:var(--card)}
+.seg button{min-height:46px;border:0;border-right:2px solid var(--line);background:transparent;font:800 16px var(--cond);text-transform:uppercase;letter-spacing:.04em}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fill);color:var(--on-fill)}
+.inline-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn2{min-height:46px;border:2px solid var(--line);background:var(--card);font:800 16px var(--cond);text-transform:uppercase;letter-spacing:.04em;padding:8px}
+.btn2:active{background:var(--ground)}
+.btn2:disabled{opacity:.4}
+label.field{display:block;font:600 15px var(--sans);margin:4px 0}
+input[type=range]{width:100%;height:34px}
+input[type=number]{font:800 26px var(--cond);width:110px;border:2px solid var(--line);padding:4px 8px;background:var(--card);border-radius:0}
+.numrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.numrow .u{font:700 16px var(--cond);text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font:500 14.5px/1.3 var(--sans);font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--grid)}
+th{font:700 12.5px var(--cond);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:2px solid var(--line)}
+td.r,th.r{text-align:right}
+.sw{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:6px;border:1px solid var(--line)}
+details.how{margin:16px 16px 0;border-top:3px solid var(--line);padding-top:4px}
+details.how summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;font:800 17px var(--cond);text-transform:uppercase;letter-spacing:.05em;list-style:none;cursor:pointer}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary svg{width:20px;height:20px;transition:transform .2s ease-out}
+details.how[open] summary svg{transform:rotate(180deg)}
+details.how p,details.how li{font-size:15px;max-width:62ch}
+details.how ol,details.how ul{padding-left:20px;margin:0 0 10px}
+details.how li{margin-bottom:5px}
+
+/* ---------- action bar ---------- */
+.actions{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:var(--dock);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.actions .in{max-width:608px;margin:0 auto;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
+.actions .in.two{grid-template-columns:1fr 1fr}
+.actions button{min-height:54px;font:800 19px/1 var(--cond);text-transform:uppercase;letter-spacing:.05em;border:0;padding:0 10px;transition:transform .1s ease-out}
+.actions button:active{transform:scale(.98)}
+.go{background:var(--hv);color:var(--on-hv)}
+.go:disabled{background:var(--go-off);color:var(--go-off-ink)}
+.stopb{background:var(--alert);color:var(--on-alert)}
+.stopb:disabled{background:transparent;color:var(--dock-muted);border:2px solid var(--dock-off)!important}
+.sec{background:transparent;color:var(--on-dock);border:2px solid var(--dock-muted)!important}
+.actions button:disabled{opacity:.38}
+
+/* ---------- ride ---------- */
+.scale{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin:14px 0 4px;position:relative}
+.scale div{height:16px}
+.ptr{position:absolute;top:-10px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid var(--ink);transform:translateX(-8px);transition:left .25s ease-out}
+.scalelab{display:grid;grid-template-columns:repeat(6,1fr);font:700 12px/1.15 var(--cond);text-transform:uppercase;text-align:center;color:var(--muted)}
+#map{height:320px;background:var(--ground)}
+#mapFallback{display:none;height:320px;background:var(--ground)}
+.leaflet-container{font-family:var(--sans)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font:600 13px var(--sans);color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:20px;height:7px}
+.legend i.dot{width:12px;height:12px;border-radius:50%;background:var(--casing);box-shadow:0 0 0 2px var(--hv)}
+.stack{display:flex;gap:2px;height:24px;background:var(--ground);margin:6px 0 8px;border:2px solid var(--line)}
+.stack div{height:100%}
+
+/* ---------- operator ---------- */
+.step{font:800 22px/1.1 var(--cond);text-transform:uppercase;margin:22px 16px 0;padding-top:10px;border-top:3px solid var(--line)}
+.pad{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;height:210px;display:flex;align-items:center;justify-content:center;text-align:center;font:800 28px/1.15 var(--cond);text-transform:uppercase;letter-spacing:.03em;background:var(--ground);border:2px solid var(--line);padding:12px;white-space:pre-line}
+.pad.wait{background:var(--dock);color:var(--on-dock)}
+.pad.go{background:var(--pass);color:var(--on-pass);transition:none}
+.pad.early{background:var(--alert);color:var(--on-alert)}
+.progress{height:10px;background:var(--ground);border:2px solid var(--line);margin-top:10px}
+.progress div{height:100%;width:0;background:var(--fill)}
+.count{font:800 40px/1.1 var(--cond);text-align:center;margin:8px 0 0;font-variant-numeric:tabular-nums;min-height:44px}
+.pair{margin:10px 0 14px}
+.pair .lab{font:700 15px var(--sans);margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
+.pair .lab span{font-weight:500;color:var(--muted)}
+.bar{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;font:600 14px var(--sans);margin:4px 0;font-variant-numeric:tabular-nums}
+.bar .t{color:var(--muted);font:700 13px var(--cond);text-transform:uppercase;letter-spacing:.04em}
+.bar .track{display:flex;align-items:center;gap:8px}
+.bar .f{height:16px;min-width:2px}
+.bar .f.base{background:repeating-linear-gradient(90deg,var(--silver) 0 4px,var(--silver3) 4px 8px);border:1px solid var(--line)}
+.bar .f.now{background:var(--fill)}
+.callout{background:var(--ground);border:2px solid var(--line);padding:10px 12px;font:500 15.5px/1.4 var(--sans);margin-top:6px}
+
+/* ---------- comfort ---------- */
+.seg.four{grid-template-columns:repeat(4,1fr)}
+.seg.two{grid-template-columns:1fr 1fr}
+#nzTable tr.here td{background:var(--hv);color:var(--on-hv);font-weight:700}
+.rtb{display:grid;grid-template-columns:62px 1fr 64px;align-items:center;gap:8px;margin:7px 0;font:600 14px var(--sans);font-variant-numeric:tabular-nums}
+.rtb .t{font:700 13px var(--cond);text-transform:uppercase;color:var(--muted)}
+.rtb .tr{position:relative;height:18px;background:var(--ground);border:1px solid var(--grid)}
+.rtb .f{position:absolute;left:0;top:0;bottom:0}
+.rtb .lim{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--ink)}
+.rtb .v{text-align:right}
+#cmGG{max-width:340px;margin:0 auto}
+.trip{margin:10px 0 12px}
+.trip .lab{display:flex;justify-content:space-between;gap:8px;font:700 15px var(--sans)}
+.trip .lab span{font-weight:500;color:var(--muted);font-size:13.5px;text-align:right}
+.trip .row{display:flex;align-items:center;gap:8px;margin-top:4px;font:600 14px var(--sans);font-variant-numeric:tabular-nums}
+.trip .f{height:18px;min-width:2px;border:1px solid var(--line)}
+.trip.now .lab::after{content:"this trip";font:800 11px var(--cond);text-transform:uppercase;letter-spacing:.06em;background:var(--fill);color:var(--on-fill);padding:5px 8px;margin-left:auto}
+/* ---------- tap ---------- */
+.meter{height:14px;border:2px solid var(--line);background:var(--card);position:relative;margin-top:8px}
+.meter div{height:100%;width:0;background:var(--fill);transition:width .08s linear}
+.meter i{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--alert)}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+@media (max-width:360px){ .band .num{font-size:78px} .tiles b{font-size:26px} header.top h1{font-size:24px} }
+</style>
+</head>
+<body>
+<aside class="side" aria-label="Open on a phone">
+  <div>
+    <h2>Field<br>Kit</h2>
+    <p>Nine engineering measurements from the sensors already in a phone. The sensors only work on a phone, so scan this to open it there.</p>
+    <div class="qr" id="qr"></div>
+    <div class="qrcap">Scan with the iPhone camera</div>
+    <div class="url" id="qrUrl"></div>
+    <div class="theme" role="group" aria-label="Colour mode"><button type="button" data-theme="day" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Day</button><button type="button" data-theme="night" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></svg>Night</button></div>
+  </div>
+  <div class="foot">ED5518 Assignment 2 · Sidharth Raj M · NS26Z087</div>
+</aside>
+<div class="app">
+<div id="secureWarn" class="warnbox hide">This page isn't on a secure (https) link, so the phone won't share its sensors. Open the GitHub Pages link instead.</div>
+
+<!-- =================== KIT =================== -->
+<section class="screen on" id="kit" aria-labelledby="kitTitle">
+  <div class="home">
+    <div class="theme" role="group" aria-label="Colour mode"><button type="button" data-theme="day" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Day</button><button type="button" data-theme="night" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></svg>Night</button></div>
+    <h1 id="kitTitle">Field<br>Kit</h1>
+    <p class="deck">Nine engineering measurements from the sensors already in your phone.</p>
+  </div>
+  <div class="tape flash"><span>9 tools</span><span>5 sensors</span><span>No extra hardware</span></div>
+  <div id="toolList"></div>
+  <div class="about">
+    <h2>Before you measure</h2>
+    <ul>
+      <li>Open this page from its <b>https</b> link in Safari. When asked, tap <b>Allow</b> for motion, location or microphone.</li>
+      <li>One tool records at a time. The screen stays on while a tool records.</li>
+      <li>Every tool has a <b>How it's measured</b> section with its formula and its limits.</li>
+    </ul>
+    <h2>Privacy</h2>
+    <p>Readings never leave the phone. Only the map pictures come from OpenStreetMap. The whole app, source included, is this one HTML file.</p>
+    <p class="credit">ED5518 Assignment 2 · Sidharth Raj M · NS26Z087</p>
+  </div>
+</section>
+
+<!-- =================== RIDE =================== -->
+<section class="screen" id="ride" aria-labelledby="rideT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="rideT">Road roughness</h1><span class="sens-tag">Accel · GPS</span></header>
+  <div class="band" id="b-ride" data-state="idle" data-ghost="0.00"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">0.00</span><span class="unit">m/s²<br>RMS</span></div></div>
+  <div class="meaning"><span class="verdict" id="bandNow">Tap start</span></div>
+  <div class="card" style="padding-bottom:12px">
+    <h2>Comfort scale · ISO 2631-1</h2>
+    <div class="scale" id="scale"><span class="ptr" id="ptr" style="left:0"></span></div>
+    <div class="scalelab"><span>Smooth</span><span>Slight</span><span>Fair</span><span>Rough</span><span>Very rough</span><span>Extreme</span></div>
+  </div>
+  <div class="tiles">
+    <div><b id="spd">–</b><span>km/h</span></div>
+    <div><b id="bumpN">0</b><span id="bumpRate">bumps</span></div>
+    <div><b id="dist">0.00</b><span>km</span></div>
+  </div>
+  <div class="status" id="rideStatus">Rest the phone flat on your lap, seat or dashboard. It works out which way is down by itself.</div>
+  <div class="card">
+    <h2>Vertical jolts · last 15 s</h2>
+    <p class="cap">m/s² against time. A jolt past the dashed lines counts as a bump.</p>
+    <canvas id="traceC" aria-label="Line chart of vertical acceleration over the last 15 seconds"></canvas>
+  </div>
+  <div class="card">
+    <h2>Where the road is rough</h2>
+    <p class="cap">Each stretch is coloured by how rough it was. Tap a dot to see that bump.</p>
+    <div style="position:relative"><div id="map"></div><div class="maploading" id="mapLoad"><span>Loading map</span><i class="hazard"></i></div></div>
+    <canvas id="mapFallback" aria-label="Route drawing coloured by roughness"></canvas>
+    <div class="legend" id="mapLegend"></div>
+    <div class="inline-btns"><button class="btn2" id="recentre">Re-centre map</button><button class="btn2" id="thrBtn" aria-expanded="false">Bump threshold</button></div>
+    <div id="thrBox" class="hide" style="margin-top:10px">
+      <label class="field" for="thr">Count a bump above <b id="thrV">4.0</b> m/s² (≈ <span id="thrG">0.41</span> g)</label>
+      <input type="range" id="thr" min="2" max="8" step="0.5" value="4">
+      <p class="cap">Lower it for a smooth car, raise it for an auto-rickshaw.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Trip summary</h2>
+    <p class="cap" id="sumCap">Fills in once the ride starts.</p>
+    <div class="stack" id="bandStack" aria-label="Share of trip time in each comfort band"></div>
+    <table id="bandTable"><thead><tr><th>Comfort band</th><th class="r">RMS</th><th class="r">Time</th><th class="r">Share</th></tr></thead><tbody></tbody></table>
+    <h2 style="margin-top:14px">Worst bumps</h2>
+    <table id="bumpTable"><thead><tr><th>#</th><th class="r">At</th><th class="r">Peak</th><th class="r">Speed</th></tr></thead><tbody><tr><td colspan="4" class="cap">None yet.</td></tr></tbody></table>
+  </div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Finding down.</b> A slow 1-second average of the accelerometer follows gravity. Whatever is left over, projected onto gravity, is the vertical jolt. This is why the phone can lie any way up.</li>
+      <li><b>Comfort.</b> The root-mean-square of the vertical jolt over the last 5 s, matched to the ISO 2631-1 bands: &lt; 0.315, 0.315–0.63, 0.63–1.0, 1.0–1.6, 1.6–2.5, &gt; 2.5 m/s². Where the standard's bands overlap, this app uses the upper edge.</li>
+      <li><b>Bumps.</b> A jolt over the threshold starts an event. Its peak over the next 0.3 s is pinned at the latest GPS fix, then the app waits 1 s so one pothole isn't counted twice.</li>
+      <li><b>Map colour.</b> Between two good GPS fixes (accuracy 35 m or better, at least 3 m apart), the RMS of every jolt in between colours that stretch.</li>
+    </ol>
+    <ul>
+      <li>About 60 readings a second, so vibration up to about 30 Hz shows up. Body vibration in vehicles sits below that.</li>
+      <li>ISO 2631 also weights frequencies by how much people feel them. This app doesn't, so its value is an unweighted estimate.</li>
+      <li>GPS is good to about 5–10 m, and picking up the phone makes false bumps.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="rideBtn" data-stop="rideBtnStop">Start ride</button><button class="stopb" id="rideBtnStop" disabled>Stop</button><button class="sec" id="rideCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== RIDE COMFORT =================== -->
+<section class="screen" id="comfort" aria-labelledby="cmT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="cmT">Ride comfort</h1><span class="sens-tag">Accel · GPS</span></header>
+  <div class="seg four" role="group" aria-label="Vehicle">
+    <button aria-pressed="true" data-veh="bus">Bus</button><button aria-pressed="false" data-veh="metro">Metro</button><button aria-pressed="false" data-veh="car">Car</button><button aria-pressed="false" data-veh="auto">Auto</button>
+  </div>
+  <div class="band" id="b-cm" data-state="idle" data-ghost="0.00"><div class="row"><span class="mark"></span><span class="lbl">Ready · Bus</span></div><div class="val"><span class="num empty">0.00</span><span class="unit">m/s²<br>ISO total</span></div></div>
+  <div class="meaning"><span class="verdict" id="cmVerdict">Pick the vehicle, tap start</span></div>
+  <div class="card" style="padding-bottom:12px">
+    <h2>Passenger comfort · ISO 2631-1</h2>
+    <div class="scale" id="cmScale"><span class="ptr" id="cmPtr" style="left:0"></span></div>
+    <div class="scalelab"><span>Smooth</span><span>Slight</span><span>Fair</span><span>Rough</span><span>Very rough</span><span>Extreme</span></div>
+  </div>
+  <div class="tiles">
+    <div><b id="cmZ">–</b><span>m/s² up–down</span></div>
+    <div><b id="cmXY">–</b><span>m/s² sway</span></div>
+    <div><b id="cmH">0</b><span>harsh moves</span></div>
+  </div>
+  <div class="status" id="cmStatus">Lay the phone flat with its top edge pointing the way you travel, or clip it upright in a holder facing forward. Keep it still.</div>
+  <div class="card">
+    <h2>Comfort over the trip</h2>
+    <p class="cap">ISO total vibration (m/s², 5 s RMS) against time. The shaded bands are the six comfort levels.</p>
+    <canvas id="cmTripC" aria-label="Comfort value over the trip"></canvas>
+  </div>
+  <div class="card">
+    <h2>Pushes and swerves · last 60 s</h2>
+    <p class="cap">Each dot is how hard the vehicle pushed you. Up–down = speeding up or braking, sideways = turning. Inner ring 1 m/s² is gentle; past the dashed 2.5 m/s² ring standing passengers need to hold on.</p>
+    <canvas id="cmGG" aria-label="Acceleration diagram: forward-back against sideways"></canvas>
+  </div>
+  <div class="card">
+    <h2>Harsh moves</h2>
+    <table id="cmEvT"><thead><tr><th>#</th><th class="r">At</th><th>Move</th><th class="r">Peak</th><th class="r">Speed</th></tr></thead><tbody><tr><td colspan="5" class="cap">None yet.</td></tr></tbody></table>
+  </div>
+  <div class="card">
+    <h2>Compare vehicles</h2>
+    <p class="cap">Saved trips on one scale. The bar colour is the comfort level. Ride the same route by bus, metro and auto to compare them.</p>
+    <div id="cmCmp"><p class="cap">No trips yet.</p></div>
+    <div class="inline-btns"><button class="btn2" id="cmSave" disabled>Save this trip</button><button class="btn2" id="cmClear">Clear saved</button></div>
+  </div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Three directions.</b> A slow 3-second average finds gravity, which gives up–down. It nearly freezes during a push, so braking isn't read as a tilt. The phone's long edge, or the back of the phone in a holder, projected flat gives forward–back. Sideways is at right angles to both.</li>
+      <li><b>Vibration against pushes.</b> Movement slower than about 0.3 s (braking, pulling away, cornering) is split off as a push. What's left is vibration.</li>
+      <li><b>Comfort.</b> ISO 2631-1 total value a<sub>v</sub> = √(1.4²·a<sub>x</sub>² + 1.4²·a<sub>y</sub>² + a<sub>z</sub>²), from 5 s RMS values. Horizontal vibration counts 1.4× because seated people feel it more. Bands: &lt; 0.315, 0.315–0.63, 0.63–1.0, 1.0–1.6, 1.6–2.5, &gt; 2.5 m/s².</li>
+      <li><b>Harsh moves.</b> A push over 2.5 m/s² (about 0.25 g) for at least 0.3 s. It's a turn if it's mostly sideways. Otherwise GPS speed before and after tells a brake from a start.</li>
+      <li><b>Trip score.</b> The whole-trip a<sub>v</sub>, the share of time in the two comfortable bands, and harsh moves per 10 minutes.</li>
+    </ol>
+    <ul>
+      <li>The ISO frequency weightings (W<sub>k</sub>, W<sub>d</sub>) aren't applied, so values are unweighted estimates. Compare trips with each other rather than with lab figures.</li>
+      <li>About 60 readings a second limits vibration to about 30 Hz. Vehicle ride vibration sits mostly at 1–20 Hz.</li>
+      <li>Holding the phone in your hand adds your own movement. Rest it on a seat, your lap or a holder.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="cmBtn" data-stop="cmBtnStop">Start trip</button><button class="stopb" id="cmBtnStop" disabled>Stop</button><button class="sec" id="cmCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== DRIVING =================== -->
+<section class="screen" id="drive" aria-labelledby="drT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="drT">Driving</h1><span class="sens-tag">Accel · GPS</span></header>
+  <div class="seg two" role="group" aria-label="Mode">
+    <button aria-pressed="true" data-dmode="score">Drive score</button><button aria-pressed="false" data-dmode="launch">0–40 test</button>
+  </div>
+  <div class="band" id="b-dr" data-state="idle" data-ghost="000"><div class="row"><span class="mark"></span><span class="lbl">Ready · drive score</span></div><div class="val"><span class="num empty">000</span><span class="unit">score<br>out of 100</span></div></div>
+  <div class="meaning" id="drMeaning">A passenger should run the phone. Lay it flat, top edge pointing forward, or clip it upright in a holder.</div>
+
+  <div id="drScoreBox">
+    <div class="tiles">
+      <div><b id="drKm">0.0</b><span>km driven</span></div>
+      <div><b id="drEvN">0</b><span>harsh moves</span></div>
+      <div><b id="drSp">0</b><span>s speeding</span></div>
+    </div>
+    <div class="card">
+      <label class="field" for="drLimit">Speed limit on this road</label>
+      <div class="numrow"><input type="number" id="drLimit" value="50" min="10" max="140" step="5" inputmode="numeric"><span class="u">km/h</span></div>
+    </div>
+    <div class="card">
+      <h2>Speed over the drive</h2>
+      <p class="cap">GPS speed (km/h) against time. The dashed line is the limit; orange dots are harsh moves.</p>
+      <canvas id="drSpdC" aria-label="Speed against time"></canvas>
+    </div>
+    <div class="card">
+      <h2>How the score is made</h2>
+      <table id="drPts"><thead><tr><th>Event</th><th class="r">Count</th><th class="r">Points each</th><th class="r">Lost</th></tr></thead><tbody></tbody></table>
+      <p class="cap" style="margin-top:6px">Score = 100 − points lost. A harsh move is a push over 2.5 m/s² (about 0.25 g) for 0.3 s or more; speeding is more than 3 km/h over the limit.</p>
+    </div>
+    <div class="card">
+      <h2>Harsh moves</h2>
+      <table id="drEvT"><thead><tr><th>#</th><th class="r">At</th><th>Move</th><th class="r">Peak</th><th class="r">Speed</th></tr></thead><tbody><tr><td colspan="5" class="cap">None yet.</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div id="drLaunchBox" class="hide">
+    <div class="seg" role="group" aria-label="Target speed" id="drTargets" style="margin-top:14px">
+      <button aria-pressed="false" data-target="20">0–20</button><button aria-pressed="true" data-target="40">0–40</button><button aria-pressed="false" data-target="60">0–60</button>
+    </div>
+    <div class="tiles">
+      <div><b id="drTime">–</b><span>s to target</span></div>
+      <div><b id="drAvg">–</b><span>m/s² average</span></div>
+      <div><b id="drPk">–</b><span>m/s² peak</span></div>
+    </div>
+    <div class="card">
+      <h2>Speed during the run</h2>
+      <p class="cap">km/h against time from the moment the vehicle moved. Line = accelerometer, yellow dots = GPS, dashed = target.</p>
+      <canvas id="drRunC" aria-label="Speed during the acceleration run"></canvas>
+    </div>
+    <div class="card">
+      <h2>Runs</h2>
+      <table id="drRunT"><thead><tr><th>#</th><th>Test</th><th class="r">Time</th><th class="r">Average</th><th class="r">Peak</th></tr></thead><tbody><tr><td colspan="5" class="cap">No runs yet.</td></tr></tbody></table>
+    </div>
+  </div>
+  <div class="status" id="drStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Directions.</b> Gravity gives up–down. The phone's long edge, or the back of the phone in a holder, laid flat gives forward–back. Sideways is at right angles to both.</li>
+      <li><b>Harsh moves.</b> Slow pushes (smoothed over 0.3 s) over 2.5 m/s² for at least 0.3 s. Mostly sideways means a sharp turn. For forward–back, the app learns which way is forward by matching pushes against GPS speed changes, then tells a brake from a start.</li>
+      <li><b>Speeding.</b> GPS speed more than 3 km/h over the limit you entered, counted in seconds.</li>
+      <li><b>0–40 test.</b> The phone is still for 1.5 s to fix gravity exactly. The first push over 0.8 m/s² starts the clock, back-dated to where the push began. Speed = ∫ a dt along the forward axis. The clock stops when that speed reaches the target. GPS speed is plotted as a cross-check. Average acceleration = target speed / time.</li>
+    </ol>
+    <ul>
+      <li>Only test where it's safe and legal, with a passenger holding the phone. Never use the phone while driving.</li>
+      <li>GPS speed updates about once a second and lags by about a second, so the accelerometer times the run.</li>
+      <li>The phone must not slide during the run. Wedge it or use a holder.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="drBtn" data-stop="drBtnStop">Start drive</button><button class="stopb" id="drBtnStop" disabled>Stop</button><button class="sec" id="drCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== NOISE =================== -->
+<section class="screen" id="noise" aria-labelledby="nzT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="nzT">Noise exposure</h1><span class="sens-tag">Microphone</span></header>
+  <div class="seg two" role="group" aria-label="Exposure standard">
+    <button aria-pressed="true" data-std="niosh">NIOSH · 85 dB</button><button aria-pressed="false" data-std="india">India / OSHA · 90 dB</button>
+  </div>
+  <div class="band" id="b-nz" data-state="idle" data-ghost="00"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">00</span><span class="unit">dB(A)<br>live</span></div></div>
+  <div class="meaning" id="nzMeaning">Put the phone where the worker stands, mic uncovered, and tap Listen. Leave it running for the task or the shift.</div>
+  <div class="tiles">
+    <div><b id="nzLeq">–</b><span>dB(A) average (Leq)</span></div>
+    <div><b id="nzMax">–</b><span>dB(A) loudest</span></div>
+    <div><b id="nzDose">–</b><span>% dose so far</span></div>
+  </div>
+  <div class="card">
+    <h2>Daily dose if this continues for 8 h</h2>
+    <div class="meter" style="height:22px"><div id="nzBar"></div><i style="left:50%"></i></div>
+    <div class="scalelab" style="grid-template-columns:1fr 1fr 1fr;margin-top:4px"><span style="text-align:left">0 %</span><span>100 % = daily limit</span><span style="text-align:right">200 %</span></div>
+    <p class="cap" id="nzProj" style="margin-top:8px">Starts once listening.</p>
+  </div>
+  <div class="card">
+    <h2>Level over time</h2>
+    <p class="cap">dB(A) each second, last 10 minutes. Above the dashed line is above the 8-hour limit level.</p>
+    <canvas id="nzC" aria-label="Noise level against time"></canvas>
+  </div>
+  <div class="card">
+    <h2>How long is safe</h2>
+    <p class="cap" id="nzStdCap"></p>
+    <table id="nzTable"><thead><tr><th>Average level</th><th class="r">Safe time per day</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="card">
+    <h2>Calibration</h2>
+    <p class="cap">Phone mics aren't calibrated, so levels are estimates until you match them to a sound level meter. Hold both together, type the meter's reading and tap Match.</p>
+    <div class="numrow"><input type="number" id="nzRef" placeholder="dB" min="30" max="130" step="0.5" inputmode="decimal"><span class="u">dB(A) on meter</span><button class="btn2" id="nzMatch" disabled style="min-width:110px">Match</button></div>
+    <p class="cap" id="nzCalCap" style="margin-top:8px">Offset 0.0 dB (not calibrated).</p>
+  </div>
+  <div class="status" id="nzStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>A-weighting.</b> Each 4,096-sample block is Fourier-transformed and each frequency is weighted by the A-curve (IEC 61672), which follows how loud people hear it. The weighted energy gives the level in dB(A).</li>
+      <li><b>Level.</b> dB = mic level (dBFS) + 115 dB (a typical phone mic, estimated) + your calibration offset.</li>
+      <li><b>Leq.</b> The energy average: L<sub>eq</sub> = 10·log₁₀(mean of 10<sup>L/10</sup>).</li>
+      <li><b>Dose.</b> Allowed time T(L) = 8 h / 2<sup>(L − criterion)/exchange</sup>. NIOSH: 85 dB(A), 3 dB exchange. India (Factories Act model rules) and US OSHA: 90 dB(A), 5 dB exchange. Dose = Σ (time at L) / T(L). The 8-hour projection is dose × 8 h / time measured.</li>
+    </ol>
+    <ul>
+      <li>Without calibration, treat numbers as ±5 dB or so. A 3 dB error halves or doubles the allowed time on NIOSH.</li>
+      <li>Very loud impacts (above about 115 dB) can clip the phone mic and read low.</li>
+      <li>A screening tool, not a certified dosimeter.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="nzBtn" data-stop="nzBtnStop">Listen</button><button class="stopb" id="nzBtnStop" disabled>Stop</button><button class="sec" id="nzCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== OPERATOR =================== -->
+<section class="screen" id="op" aria-labelledby="opT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="opT">Operator check</h1><span class="sens-tag">Accel · Touch</span></header>
+  <div class="band" id="b-op" data-state="idle" data-ghost="0.000"><div class="row"><span class="mark"></span><span class="lbl">Tremor size</span></div><div class="val"><span class="num empty">0.000</span><span class="unit">m/s²<br>3–20 Hz</span></div></div>
+  <div class="meaning" id="opMeaning">Test while rested and save it as a baseline. Test again after a shift, after lifting, or when tired.</div>
+
+  <h2 class="step">Step 1 · Hand tremor</h2>
+  <div class="card">
+    <p class="cap">Hold the phone in one hand at arm's length, screen facing you, elbow off the table. Keep it as still as you can for 10 seconds.</p>
+    <div class="count" id="tremCount" aria-live="polite"></div>
+    <div class="progress"><div id="tremProg"></div></div>
+    <div class="inline-btns" style="grid-template-columns:1fr"><button class="btn2" id="tremBtn">Start 10 s tremor test</button></div>
+  </div>
+  <div class="status" id="tremStatus"></div>
+  <div id="tremOut" class="hide">
+    <div class="tiles">
+      <div><b id="tRms">–</b><span>m/s² RMS</span></div>
+      <div><b id="tPk">–</b><span>Hz peak</span></div>
+      <div><b id="tFs">–</b><span>readings/s</span></div>
+    </div>
+    <div class="card">
+      <h2>Hand shake · 10 s</h2>
+      <p class="cap">m/s² against time, with slow arm drift removed (shown for the axis that shook most).</p>
+      <canvas id="tremTraceC" aria-label="Line chart of hand acceleration over 10 seconds"></canvas>
+    </div>
+    <div class="card">
+      <h2>Shake frequencies</h2>
+      <p class="cap">Strength (m/s²) against frequency (Hz). Normal tremor in a healthy hand peaks in the yellow 8–12 Hz zone.</p>
+      <canvas id="tremSpecC" aria-label="Spectrum of hand tremor from 0 to 25 hertz"></canvas>
+    </div>
+  </div>
+
+  <h2 class="step">Step 2 · Reaction time</h2>
+  <div class="card">
+    <p class="cap">Tap the pad to begin. When it turns green, tap as fast as you can. 5 tries.</p>
+    <div class="pad" id="pad" role="button" tabindex="0">Tap to start</div>
+  </div>
+  <div class="status" id="rtStatus"></div>
+  <div id="rtOut" class="hide">
+    <div class="tiles">
+      <div><b id="rMed">–</b><span>ms median</span></div>
+      <div><b id="rBest">–</b><span>ms fastest</span></div>
+      <div><b id="rSpread">–</b><span>ms spread</span></div>
+    </div>
+    <div class="card">
+      <h2>Your 5 tries</h2>
+      <p class="cap">One dot per try, in ms. The solid line is your median; the dashed line is your baseline median.</p>
+      <canvas id="rtC" aria-label="Dot plot of reaction times"></canvas>
+    </div>
+  </div>
+
+  <h2 class="step">Step 3 · Against your baseline</h2>
+  <div class="card">
+    <div id="cmp"><p class="cap">Do both tests, then save them as your baseline.</p></div>
+    <div class="inline-btns"><button class="btn2" id="saveBase" disabled>Save as baseline</button><button class="btn2" id="clearBase" disabled>Clear baseline</button></div>
+  </div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Tremor.</b> 10 s of all three axes: remove the trend, apply a Hann window, then a Fourier transform. Tremor size is the RMS in 3–20 Hz, from Parseval's theorem. The peak is the strongest frequency in that band.</li>
+      <li><b>Reaction.</b> The pad turns green after a random 1.5–4 s. Time runs from the first frame showing green to the finger landing. Taps under 100 ms count as guesses and are retried. The median of 5 is reported.</li>
+      <li><b>Verdict.</b> This app's own rule of thumb, not a medical one: tremor at least 1.5× baseline, or reaction at least 40 ms slower, is flagged.</li>
+    </ol>
+    <ul>
+      <li>About 60 readings a second, so shake up to about 30 Hz can be seen. Hand tremor sits at 8–12 Hz.</li>
+      <li>The touchscreen adds a fixed delay of about 10–30 ms. It's the same in both tests, so the comparison stays fair.</li>
+      <li>Not a medical device.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in two"><button class="stopb" id="opStop" disabled>Stop test</button><button class="sec" id="opCsv" disabled>Save test CSV</button></div></div>
+</section>
+
+<!-- =================== ROOM ACOUSTICS =================== -->
+<section class="screen" id="room" aria-labelledby="rmT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="rmT">Room acoustics</h1><span class="sens-tag">Microphone</span></header>
+  <div class="seg" role="group" aria-label="Room type">
+    <button aria-pressed="true" data-room="small">Classroom</button><button aria-pressed="false" data-room="large">Large class</button><button aria-pressed="false" data-room="none">Any room</button>
+  </div>
+  <div class="band" id="b-rm" data-state="idle" data-ghost="0.00"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">0.00</span><span class="unit">seconds<br>RT60 · 500–1k Hz</span></div></div>
+  <div class="meaning" id="rmMeaning">Stand in the middle of the room, tap Listen, then clap once, loud and sharp. Stay quiet for 2 seconds. Clap 3 to 5 times for a steady average.</div>
+  <div class="card">
+    <h2>Input level</h2>
+    <p class="cap">A clap above the orange line starts a 2.5 s capture.</p>
+    <div class="meter"><div id="rmLevel"></div><i id="rmTrig" style="left:40%"></i></div>
+  </div>
+  <div class="tiles">
+    <div><b id="rmEdt">–</b><span>s early decay (EDT)</span></div>
+    <div><b id="rmC50">–</b><span>dB speech clarity C50</span></div>
+    <div><b id="rmN">0</b><span>claps averaged</span></div>
+  </div>
+  <div class="card">
+    <h2>How the echo dies away · 1 kHz</h2>
+    <p class="cap">Sound energy still left in the room (dB) against time (s). The dashed line is the T20 fit; the grey line shows how a room exactly at the limit would decay.</p>
+    <canvas id="rmDecC" aria-label="Energy decay curve"></canvas>
+  </div>
+  <div class="card">
+    <h2>Echo time by pitch</h2>
+    <p class="cap">RT60 in each octave band, averaged over your claps. The dark tick on each bar is the limit. Speech lives mostly at 500 Hz to 2 kHz.</p>
+    <div id="rmBands"><p class="cap">No claps yet.</p></div>
+  </div>
+  <div class="card">
+    <h2>What would fix it</h2>
+    <p class="cap">Enter the room size to estimate how much sound-absorbing material would bring the echo time to the limit (Sabine).</p>
+    <div class="numrow" style="gap:6px">
+      <input type="number" id="rmL" value="9" min="1" max="100" step="0.1" inputmode="decimal" aria-label="Length in metres" style="width:84px"><span class="u">×</span>
+      <input type="number" id="rmW" value="7" min="1" max="100" step="0.1" inputmode="decimal" aria-label="Width in metres" style="width:84px"><span class="u">×</span>
+      <input type="number" id="rmH" value="3.2" min="2" max="20" step="0.1" inputmode="decimal" aria-label="Height in metres" style="width:84px"><span class="u">m</span>
+    </div>
+    <div class="callout" id="rmFix" style="margin-top:10px">Clap first.</div>
+  </div>
+  <div class="card">
+    <h2>Claps</h2>
+    <table id="rmTable"><thead><tr><th>#</th><th class="r">RT60 mid</th><th class="r">EDT</th><th class="r">C50</th><th class="r">Range</th></tr></thead><tbody><tr><td colspan="5" class="cap">No claps yet.</td></tr></tbody></table>
+    <div class="inline-btns"><button class="btn2" id="rmUndo" disabled>Drop last clap</button><button class="btn2" id="rmClear">Clear claps</button></div>
+  </div>
+  <div class="status" id="rmStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Impulse.</b> A clap is a short, loud burst of every frequency. What the mic hears afterwards is the room's own echo dying away.</li>
+      <li><b>Octave bands.</b> The capture is filtered into octave bands at 250, 500, 1k, 2k and 4k Hz (two band-pass stages each).</li>
+      <li><b>Decay curve.</b> Schroeder backward integration (ISO 3382-2): energy left in the room at time t = sum of squared samples from t to the end, with the background noise subtracted and the curve cut where it meets the noise.</li>
+      <li><b>RT60 (T20).</b> A straight line is fitted to the curve between −5 and −25 dB, and extrapolated to a 60 dB drop: RT60 = 60 / decay rate. EDT uses 0 to −10 dB. The headline value is the mean of 500 Hz and 1 kHz.</li>
+      <li><b>Speech clarity C50.</b> 10·log₁₀(energy in the first 50 ms / energy after), at 1 kHz. Above 0 dB, speech usually comes across clearly.</li>
+      <li><b>Limits.</b> ANSI S12.60 classrooms: 0.6 s up to 283 m³, 0.7 s up to 566 m³.</li>
+      <li><b>Fix.</b> Sabine: absorption A = 0.161·V / RT. Extra absorption needed = 0.161·V·(1/RT<sub>limit</sub> − 1/RT<sub>now</sub>) m²; divided by 0.8 (a typical acoustic panel) gives the panel area.</li>
+    </ol>
+    <ul>
+      <li>A clap gives about 40–50 dB of range above room noise, enough for T20 but not T30. Rows with under 30 dB of range are marked.</li>
+      <li>Claps are weak below 250 Hz, so the bass bands are less certain. A balloon pop works better.</li>
+      <li>Measure with the room in normal use (furniture in, doors shut) and at two or three spots.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="rmBtn" data-stop="rmBtnStop">Listen</button><button class="stopb" id="rmBtnStop" disabled>Stop</button><button class="sec" id="rmCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== TAP TONE =================== -->
+<section class="screen" id="tap" aria-labelledby="tpT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="tpT">Tap-tone</h1><span class="sens-tag">Microphone</span></header>
+  <div class="band" id="b-tap" data-state="idle" data-ghost="0000"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">0000</span><span class="unit">Hz<br>rings at</span></div></div>
+  <div class="meaning" id="tpMeaning">Tap Listen, hold the phone near the object, and tap the object once with a coin or pen.</div>
+  <div class="card">
+    <h2>Input level</h2>
+    <p class="cap">The bar shows the sound reaching the mic. A tap above the orange line starts a capture.</p>
+    <div class="meter"><div id="tpLevel"></div><i id="tpTrig" style="left:30%"></i></div>
+  </div>
+  <div class="tiles">
+    <div><b id="tpT60">–</b><span>s ring time (T60)</span></div>
+    <div><b id="tpZeta">–</b><span>damping ζ</span></div>
+    <div><b id="tpQ">–</b><span>Q factor</span></div>
+  </div>
+  <div class="card">
+    <h2>Which frequencies it rings at</h2>
+    <p class="cap">Sound level (dB) against frequency (Hz, log scale). The main ringing mode is marked.</p>
+    <canvas id="tpSpecC" aria-label="Spectrum of the tap sound"></canvas>
+  </div>
+  <div class="card">
+    <h2>How fast the ringing dies</h2>
+    <p class="cap">Level of the main frequency (dB) against time (s). A steeper line means more damping. The dashed line is the straight-line fit.</p>
+    <canvas id="tpDecC" aria-label="Decay of the main frequency over time"></canvas>
+  </div>
+  <div class="card">
+    <h2>Against a reference part</h2>
+    <p class="cap">Tap a part you know is sound and save it. Tap the suspect part. A crack or a loose joint usually rings lower and dies faster.</p>
+    <div id="tpCmp"></div>
+    <table id="tpTable"><thead><tr><th>#</th><th class="r">Hz</th><th class="r">T60 s</th><th class="r">ζ</th></tr></thead><tbody><tr><td colspan="4" class="cap">No taps yet.</td></tr></tbody></table>
+    <div class="inline-btns"><button class="btn2" id="tpRef" disabled>Save last as reference</button><button class="btn2" id="tpClear">Clear taps</button></div>
+  </div>
+  <div class="status" id="tpStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Capture.</b> The mic runs at the phone's audio rate (usually 48,000 samples/s). A sudden jump over the background starts a 1.2 s capture.</li>
+      <li><b>Main frequency.</b> An 8,192-point Fourier transform (Hann window) of the ringing just after the hit finds the strongest peak from 80 Hz to 12 kHz. The peak is refined between bins.</li>
+      <li><b>Decay.</b> The level of that frequency is tracked in 1,024-sample frames (Goertzel filter). A straight line fitted to level (dB) against time gives the decay rate D in dB/s.</li>
+      <li><b>Damping.</b> T60 = 60 / D. Damping ratio ζ = D / (8.686 · 2π f). Q = 1 / (2ζ).</li>
+    </ol>
+    <ul>
+      <li>The mic isn't calibrated, so levels are relative. Frequencies and decay rates don't depend on calibration.</li>
+      <li>Room echo can stretch long ring times. Tap in a quiet spot, close to the mic.</li>
+      <li>Compare like with like: same tap spot, same striker, same support.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="tpBtn" data-stop="tpBtnStop">Listen</button><button class="stopb" id="tpBtnStop" disabled>Stop</button><button class="sec" id="tpCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== LIFT =================== -->
+<section class="screen" id="lift" aria-labelledby="lfT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="lfT">Lift profile</h1><span class="sens-tag">Accel</span></header>
+  <div class="band" id="b-lift" data-state="idle" data-ghost="0.00"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">0.00</span><span class="unit">m/s²<br>vertical</span></div></div>
+  <div class="meaning" id="lfMeaning">Stand in the lift holding the phone still, or lay it on the floor. Tap Start before the doors close and Stop after they open.</div>
+  <div class="tiles">
+    <div><b id="lfH">–</b><span>m travelled</span></div>
+    <div><b id="lfV">–</b><span>m/s top speed</span></div>
+    <div><b id="lfF">–</b><span>floors</span></div>
+  </div>
+  <div class="card">
+    <h2>Ride comfort</h2>
+    <table><thead><tr><th>Measure</th><th class="r">This lift</th><th class="r">Typical design</th></tr></thead>
+      <tbody><tr><td>Peak acceleration</td><td class="r" id="lfA">–</td><td class="r">1.0–1.5 m/s²</td></tr>
+      <tr><td>Peak jerk</td><td class="r" id="lfJ">–</td><td class="r">1.0–2.0 m/s³</td></tr>
+      <tr><td>Time moving</td><td class="r" id="lfT2">–</td><td class="r">–</td></tr></tbody></table>
+    <p class="cap" style="margin-top:6px">Typical passenger-lift design values, as quoted in CIBSE Guide D.</p>
+  </div>
+  <div class="card">
+    <h2>Acceleration · speed · height</h2>
+    <p class="cap">Three charts on one time axis. Up is positive. Speed and height are corrected for drift once you stop.</p>
+    <canvas id="lfAC" aria-label="Vertical acceleration against time"></canvas>
+    <canvas id="lfVC" aria-label="Vertical speed against time" style="margin-top:6px"></canvas>
+    <canvas id="lfHC" aria-label="Height against time" style="margin-top:6px"></canvas>
+  </div>
+  <div class="card">
+    <label class="field" for="lfFloor">Height of one floor</label>
+    <div class="numrow"><input type="number" id="lfFloor" value="3.2" min="2" max="6" step="0.1" inputmode="decimal"><span class="u">m</span></div>
+  </div>
+  <div class="status" id="lfStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Calibrate.</b> For the first 2 s the phone must be still. The average size of the accelerometer reading is your local g.</li>
+      <li><b>Vertical acceleration.</b> a = |reading| − g. In a lift almost all the extra acceleration is vertical, so this works whichever way up the phone is.</li>
+      <li><b>Speed and height.</b> Integrate a to get speed, then integrate speed to get height. Integration drifts, and a lift cruising at constant speed feels the same as one at rest. So the ride is taken as at rest only at the start and after the doors open, and the speed is corrected in a straight line between those two points.</li>
+      <li><b>Jerk.</b> The rate of change of acceleration, from a 0.2 s smoothed signal. Passengers feel jerk as the jolt at the start and end of the run.</li>
+    </ol>
+    <ul>
+      <li>Walking or swinging the phone adds false acceleration. Keep it still.</li>
+      <li>Height error grows with ride length; expect about ±5–10 % on a few floors.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="lfBtn" data-stop="lfBtnStop">Start lift ride</button><button class="stopb" id="lfBtnStop" disabled>Stop</button><button class="sec" id="lfCsv" disabled>Save CSV</button></div></div>
+</section>
+
+<!-- =================== PENDULUM =================== -->
+<section class="screen" id="pend" aria-labelledby="pdT">
+  <header class="top"><a class="back" href="#kit" aria-label="Back to kit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M15 5l-7 7 7 7"/></svg>Kit</a><h1 id="pdT">Pendulum g-lab</h1><span class="sens-tag">Gyroscope</span></header>
+  <div class="band" id="b-pend" data-state="idle" data-ghost="0.00"><div class="row"><span class="mark"></span><span class="lbl">Ready</span></div><div class="val"><span class="num empty">0.00</span><span class="unit">m/s²<br>measured g</span></div></div>
+  <div class="meaning" id="pdMeaning">Hang the phone on a string or a lanyard. Enter the length, tap Start, pull it aside about 10° and let it swing.</div>
+  <div class="card">
+    <label class="field" for="pdL">Length from the pivot to the middle of the phone</label>
+    <div class="numrow"><input type="number" id="pdL" value="50" min="10" max="300" step="1" inputmode="decimal"><span class="u">cm</span><span class="cap" id="pdTheory" style="margin:0">Theory: T = 1.42 s</span></div>
+  </div>
+  <div class="tiles">
+    <div><b id="pdPer">–</b><span>s period</span></div>
+    <div><b id="pdN">0</b><span>swings</span></div>
+    <div><b id="pdAmp">–</b><span>° amplitude</span></div>
+  </div>
+  <div class="card">
+    <h2>Swing · rotation rate</h2>
+    <p class="cap">°/s against time, last 20 s. Each full swing crosses zero upward once.</p>
+    <canvas id="pdTraceC" aria-label="Rotation rate against time"></canvas>
+  </div>
+  <div class="card">
+    <h2>Period of each swing against theory</h2>
+    <p class="cap">One dot per swing, in s. The dashed line is 2π√(L/g) with g = 9.81 m/s².</p>
+    <canvas id="pdPerC" aria-label="Period of each swing"></canvas>
+  </div>
+  <div class="card">
+    <h2>How fast the swing dies</h2>
+    <p class="cap">Peak rotation rate of each swing (°/s). The dashed curve is the exponential fit that gives the damping.</p>
+    <canvas id="pdDecC" aria-label="Swing amplitude decay"></canvas>
+    <p class="cap" id="pdDamp" style="margin-top:6px"></p>
+  </div>
+  <div class="status" id="pdStatus"></div>
+  <details class="how"><summary>How it's measured<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></summary>
+    <ol>
+      <li><b>Swing signal.</b> The gyroscope gives the rotation rate on three axes. The axis that varies most is the swing axis.</li>
+      <li><b>Period.</b> Times where the rate crosses zero going up are found between samples. T is the median gap between them.</li>
+      <li><b>Large-swing correction.</b> Amplitude θ₀ ≈ peak rate × T / 2π. The small-angle period is T₀ = T / (1 + θ₀²/16).</li>
+      <li><b>g.</b> g = 4π² L / T₀².</li>
+      <li><b>Damping.</b> The log of each swing's peak rate falls in a straight line. Its slope is the logarithmic decrement δ, and ζ = δ / √(4π² + δ²).</li>
+    </ol>
+    <ul>
+      <li>A phone isn't a point mass, so L is the distance to its middle. The error is under about 1 % for strings longer than 40 cm.</li>
+      <li>Keep the swing in one plane. Twisting adds a second motion.</li>
+    </ul>
+  </details>
+  <div class="actions"><div class="in"><button class="go" id="pdBtn" data-stop="pdBtnStop">Start swinging</button><button class="stopb" id="pdBtnStop" disabled>Stop</button><button class="sec" id="pdCsv" disabled>Save CSV</button></div></div>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const CSSV = {};
+function css(n){ if(!(n in CSSV)) CSSV[n]=getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return CSSV[n]; }
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DEG=180/Math.PI;
+
+/* ============================================================
+   TOOL LIST
+   ============================================================ */
+const ICONS = {
+  ride:'<path d="M2 18h5l2.5-3 2.5 3h10"/><circle cx="7" cy="9" r="3"/><circle cx="17" cy="9" r="3"/><path d="M10 9h4"/>',
+  op:'<path d="M8 13V5.5a1.5 1.5 0 013 0V12"/><path d="M11 11.5V4.5a1.5 1.5 0 013 0V12"/><path d="M14 11.5V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6.5 7S5 17.5 4.5 15L3 11.5a1.5 1.5 0 012.6-1.4L8 13"/>',
+  drive:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M3.5 10.5h6M14.5 10.5h6M12 14.5V21"/>',
+  noise:'<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a3 3 0 010 6M18.5 6.5a7 7 0 010 11"/>',
+  room:'<path d="M3 20h18M5 20V6h14v14"/><path d="M9 13c1.6-1.4 4.4-1.4 6 0M7 10c2.8-2.6 7.2-2.6 10 0"/>',
+  comfort:'<path d="M7 3v11h9l2.5 7"/><path d="M7 14l-2 7"/><path d="M10 9.5h6"/>',
+  tap:'<path d="M5 3v8a4 4 0 008 0V3"/><path d="M9 15v6"/><path d="M16.5 7c1.3 1.4 1.3 3.6 0 5M19.5 5c2.5 2.6 2.5 6.4 0 9"/>',
+  lift:'<rect x="4" y="2" width="16" height="20"/><path d="M12 2v20"/><path d="M6.5 9.5L8.5 7l2 2.5M13.5 14.5l2 2.5 2-2.5"/>',
+  pend:'<path d="M4 3h16"/><path d="M12 3l5 13"/><circle cx="17.6" cy="17.5" r="3"/><path d="M12 3v11" stroke-dasharray="2 2"/>'
+};
+const TOOLS = [
+  {id:'ride',  name:'Road roughness', q:'Where is this road bad? A pothole map from one ride.', sens:'Accel · GPS', g:'road'},
+  {id:'comfort', name:'Ride comfort', q:'How comfortable is this bus, metro, car or auto for passengers?', sens:'Accel · GPS', g:'road'},
+  {id:'drive', name:'Driving', q:'How safely is this vehicle driven, and how fast does it reach 40 km/h?', sens:'Accel · GPS', g:'road'},
+  {id:'op',    name:'Operator check', q:'Is this person steady and alert enough for precise work?', sens:'Accel · Touch', g:'people'},
+  {id:'noise', name:'Noise exposure', q:'Is this workplace loud enough to damage hearing over a shift?', sens:'Mic', g:'people'},
+  {id:'room',  name:'Room acoustics', q:'Is this classroom or hall too echoey for clear speech?', sens:'Mic', g:'build'},
+  {id:'tap',   name:'Tap-tone',       q:'At what frequency does this part ring, and is it damaged?', sens:'Mic', g:'build'},
+  {id:'lift',  name:'Lift profile',   q:'How far, how fast and how smooth is this lift ride?', sens:'Accel', g:'build'},
+  {id:'pend',  name:'Pendulum g-lab', q:'What is g here, and how much damping is in the swing?', sens:'Gyro', g:'lab'}
+];
+const svgIcon=(p,sw)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw||2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const GROUPS=[['road','On the road'],['people','People at work'],['build','Buildings & parts'],['lab','Lab']];
+const LAST_KEY='fieldkit.last.v1';
+let KIT_LAST={}; try{ KIT_LAST=JSON.parse(localStorage.getItem(LAST_KEY)||'{}')||{}; }catch(e){}
+function kitNote(id,text){ KIT_LAST[id]=text; try{ localStorage.setItem(LAST_KEY,JSON.stringify(KIT_LAST)); }catch(e){} const el=$('note-'+id); if(el) el.textContent='Last · '+text; }
+function paintRamps(){
+  [$('scale'),$('cmScale')].forEach(el=>{ if(!el) return; el.querySelectorAll('div').forEach(d=>d.remove()); for(let i=0;i<6;i++){ const d=document.createElement('div'); d.style.background=bandColor(i); el.appendChild(d); } });
+  $('mapLegend').innerHTML=BANDS.map((b,i)=>`<span><i style="background:${bandColor(i)}"></i>${b.short}</span>`).join('')+'<span><i class="dot"></i>Bump</span>';
+}
+function paintChrome(){
+  try{
+    const mt=document.querySelector('meta[name="theme-color"]'); if(mt) mt.setAttribute('content', css('--shell'));
+    const ic=document.querySelector('link[rel="icon"]');
+    if(ic) ic.href='data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="${css('--shell')}"/><rect y="26" width="64" height="12" fill="${css('--silver')}"/><rect y="24" width="64" height="3" fill="${css('--band-ink')}"/><rect y="37" width="64" height="3" fill="${css('--band-ink')}"/></svg>`);
+    const url=location.href.split('#')[0]; $('qrUrl').textContent=url; $('qr').innerHTML='';
+    if(window.QRCode) new QRCode($('qr'),{text:url,width:200,height:200,colorDark:'#14181f',colorLight:css('--qr-bg'),correctLevel:QRCode.CorrectLevel.M});
+    else $('qr').style.display='none';
+  }catch(e){}
+}
+function setTheme(t){
+  document.documentElement.dataset.palette=t;
+  try{ localStorage.setItem('fieldkit.theme',t); }catch(e){}
+  for(const k in CSSV) delete CSSV[k];
+  document.querySelectorAll('.theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.theme===t)));
+  paintRamps(); paintChrome(); route(true);
+}
+function buildKit(){
+  $('toolList').innerHTML = GROUPS.map(([g,label])=>`<h2 class="grp">${label}</h2><ul class="tools">`+TOOLS.filter(t=>t.g===g).map(t=>`<li><a href="#${t.id}"><span class="ticon">${svgIcon(ICONS[t.id])}</span><span><span class="tname">${t.name}</span><span class="tq">${t.q}</span><span class="tnote" id="note-${t.id}">${KIT_LAST[t.id]?'Last · '+KIT_LAST[t.id]:''}</span></span><span class="tside"><span class="sens">${t.sens}</span><span id="live-${t.id}"></span>${svgIcon('<path d="M9 5l7 7-7 7"/>',2.5)}</span></a></li>`).join('')+'</ul>').join('');
+}
+const Busy = {
+  who:null,
+  take(id,statusEl){
+    if(this.who && this.who!==id){ const t=TOOLS.find(x=>x.id===this.who)||{name:'Another tool'}; statusEl.innerHTML=`<b>${t.name} is still recording.</b> Stop it first.`; return false; }
+    this.who=id; this.paint(); return true;
+  },
+  free(id){ if(this.who===id) this.who=null; this.paint(); },
+  paint(){ TOOLS.forEach(t=>{ const el=$('live-'+t.id); if(el) el.innerHTML = this.who===t.id ? '<span class="livetag"><i></i>Recording</span>' : ''; }); }
+};
+function setBand(id,o){
+  const b=$(id); if(!b) return;
+  if(o.state) b.dataset.state=o.state;
+  if(o.label!=null) b.querySelector('.lbl').textContent=o.label;
+  if(o.num!=null){ const el=b.querySelector('.num'), e=String(o.num)==='–'; el.textContent= e ? (b.dataset.ghost||'–') : o.num; el.classList.toggle('empty', e); }
+  if(o.unit!=null) b.querySelector('.unit').innerHTML=o.unit;
+  mirrorMini(b);
+}
+function bandProgress(id,v){
+  const b=$(id); if(!b) return; let p=b.querySelector('.bprog');
+  if(!p){ p=document.createElement('span'); p.className='bprog'; p.innerHTML='<i></i>'; b.appendChild(p); }
+  if(v==null){ p.classList.remove('on','indef'); return; }
+  p.classList.add('on'); p.classList.toggle('indef', v==='indef');
+  if(v!=='indef') p.firstChild.style.width=(clamp(v,0,1)*100).toFixed(1)+'%';
+}
+// waiting for an iOS permission: hazard tape on the band and the Start button
+function pending(id,promise){
+  const sc=$(id).closest('.screen'), go=sc && sc.querySelector('.actions .go'), was=go&&go.textContent;
+  bandProgress(id,'indef'); if(go){ go.classList.add('wait'); go.textContent='Allow access…'; }
+  const done=()=>{ bandProgress(id,null); if(go){ go.classList.remove('wait'); if(go.textContent==='Allow access…') go.textContent=was; } };
+  return promise.then(v=>{ done(); return v; }, e=>{ done(); throw e; });
+}
+function mirrorMini(b){
+  const sc=b.closest('.screen'), mini=sc && sc.querySelector('.actions .mini'); if(!mini) return;
+  mini.dataset.state=b.dataset.state;
+  mini.querySelector('.ml').textContent=b.querySelector('.lbl').textContent;
+  const n=b.querySelector('.num'), mn=mini.querySelector('.mn'); mn.textContent=n.textContent; mn.classList.toggle('empty',n.classList.contains('empty'));
+  mini.querySelector('.mu').textContent=b.querySelector('.unit').innerHTML.replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,'');
+}
+function setupDocks(){
+  document.querySelectorAll('.screen').forEach(sc=>{
+    const b=sc.querySelector('.band'), act=sc.querySelector('.actions'); if(!b||!act) return;
+    const mini=document.createElement('button'); mini.className='mini'; mini.type='button'; mini.setAttribute('aria-label','Show the live reading');
+    mini.innerHTML='<span class="mark"></span><span class="ml"></span><span class="mn"></span><span class="mu"></span>'+svgIcon('<path d="M6 15l6-6 6 6"/>',2.5);
+    mini.addEventListener('click',()=>window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
+    act.insertBefore(mini, act.firstChild); mirrorMini(b);
+    if('IntersectionObserver' in window) new IntersectionObserver(es=>es.forEach(e=>sc.classList.toggle('band-off', !e.isIntersecting && sc.classList.contains('on'))),{rootMargin:'-64px 0px 0px 0px',threshold:0}).observe(b);
+  });
+}
+const CHECK='<path d="M4 12l5 5L20 6"/>', CROSS='<path d="M6 6l12 12M18 6L6 18"/>';
+function verdictHTML(kind,text){ return `<span class="verdict ${kind||''}">${kind==='pass'?svgIcon(CHECK,3):kind==='fail'?svgIcon(CROSS,3):''}${text}</span>`; }
+
+/* ============================================================
+   SHARED MATHS
+   ============================================================ */
+const BANDS = [
+  {max:0.315, name:'Not uncomfortable',      short:'Smooth',     range:'< 0.315'},
+  {max:0.63,  name:'A little uncomfortable', short:'Slight',     range:'0.315–0.63'},
+  {max:1.0,   name:'Fairly uncomfortable',   short:'Fair',       range:'0.63–1.0'},
+  {max:1.6,   name:'Uncomfortable',          short:'Rough',      range:'1.0–1.6'},
+  {max:2.5,   name:'Very uncomfortable',     short:'Very rough', range:'1.6–2.5'},
+  {max:Infinity, name:'Extremely uncomfortable', short:'Extreme', range:'> 2.5'}
+];
+const bandColor = i => css('--b'+i);
+function bandOf(r){ for(let i=0;i<BANDS.length;i++) if(r < BANDS[i].max) return i; return BANDS.length-1; }
+function scalePos(r){
+  const e=[0,0.315,0.63,1.0,1.6,2.5,3.5];
+  for(let i=0;i<6;i++) if(r < e[i+1]) return (i + (r-e[i])/(e[i+1]-e[i]))/6;
+  return 1;
+}
+function haversine(a,b){
+  const R=6371000, toR=Math.PI/180, dLat=(b.lat-a.lat)*toR, dLon=(b.lon-a.lon)*toR;
+  const s=Math.sin(dLat/2)**2 + Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function GravityTracker(tau){ this.tau=tau; this.g=null; this.last=0; }
+// dynamic acceleration projected on the gravity direction (m/s²)
+GravityTracker.prototype.step=function(s){
+  const a=[s.x,s.y,s.z];
+  if(!this.g){ this.g=a.slice(); this.last=s.t; return 0; }
+  const dt=Math.min(0.2, Math.max(0,(s.t-this.last)/1000)); this.last=s.t;
+  const k=dt/(this.tau+dt);
+  for(let i=0;i<3;i++) this.g[i]+=k*(a[i]-this.g[i]);
+  const gm=Math.hypot(this.g[0],this.g[1],this.g[2]) || 1;
+  let v=0; for(let i=0;i<3;i++) v+=(a[i]-this.g[i])*this.g[i]/gm;
+  return v;
+};
+function detrend(arr){
+  const n=arr.length; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){ sx+=i; sy+=arr[i]; sxx+=i*i; sxy+=i*arr[i]; }
+  const b=(n*sxy-sx*sy)/((n*sxx-sx*sx)||1), a=(sy-b*sx)/n;
+  const out=new Float64Array(n); for(let i=0;i<n;i++) out[i]=arr[i]-(a+b*i);
+  return out;
+}
+function median(a){ if(!a.length) return NaN; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; }
+function linfit(xs,ys){
+  const n=xs.length; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  const b=(n*sxy-sx*sy)/((n*sxx-sx*sx)||1); return {b, a:(sy-b*sx)/n};
+}
+// in-place radix-2 FFT
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){ let bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit; if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; } }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cr=1, ci=0;
+      for(let k=0;k<len/2;k++){
+        const a=i+k, b=a+len/2, tr=re[b]*cr-im[b]*ci, ti=re[b]*ci+im[b]*cr;
+        re[b]=re[a]-tr; im[b]=im[a]-ti; re[a]+=tr; im[a]+=ti;
+        const nr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=nr;
+      }
+    }
+  }
+}
+
+/* ---------- tremor analysis ---------- */
+const TREM_LO=3, TREM_HI=20;
+function analyzeTremor(buf){
+  const N=buf.t.length; if(N<64) return null;
+  const dur=(buf.t[N-1]-buf.t[0])/1000, fs=(N-1)/dur;
+  const w=new Float64Array(N); let sw=0, sw2=0;
+  for(let n=0;n<N;n++){ w[n]=0.5-0.5*Math.cos(2*Math.PI*n/(N-1)); sw+=w[n]; sw2+=w[n]*w[n]; }
+  const mw2=sw2/N, fmax=Math.min(fs/2,25), K=Math.floor(fmax*N/fs), hi=Math.min(TREM_HI,fs/2);
+  const amp2=new Float64Array(K+1), axisBand=[0,0,0], axes=['x','y','z'], det=[];
+  let band=0;
+  axes.forEach((ax,ai)=>{
+    const x=detrend(buf[ax]); det.push(x);
+    const xw=new Float64Array(N); for(let n=0;n<N;n++) xw[n]=x[n]*w[n];
+    for(let k=1;k<=K;k++){
+      let re=0, im=0; const wk=2*Math.PI*k/N;
+      for(let n=0;n<N;n++){ re+=xw[n]*Math.cos(wk*n); im-=xw[n]*Math.sin(wk*n); }
+      const p=re*re+im*im, f=k*fs/N;
+      amp2[k]+=(2*Math.sqrt(p)/sw)**2;
+      if(f>=TREM_LO && f<=hi){ const e=2*p/(N*N*mw2); band+=e; axisBand[ai]+=e; }
+    }
+  });
+  const freqs=[], amp=[]; let pk=0, pkA=-1;
+  for(let k=1;k<=K;k++){ const f=k*fs/N; freqs.push(f); amp.push(Math.sqrt(amp2[k])); if(f>=TREM_LO && f<=hi && amp2[k]>pkA){ pkA=amp2[k]; pk=f; } }
+  const ai=axisBand.indexOf(Math.max(...axisBand)), x=det[ai];
+  const half=Math.max(1,Math.round(fs/6)), tr=[], tt=[];
+  for(let n=0;n<N;n++){
+    let s=0,c=0; for(let j=Math.max(0,n-half); j<=Math.min(N-1,n+half); j++){ s+=x[j]; c++; }
+    tr.push(x[n]-s/c); tt.push((buf.t[n]-buf.t[0])/1000);
+  }
+  return {N, fs, rms:Math.sqrt(band), peakHz:pk, peakAmp:Math.sqrt(Math.max(0,pkA)), freqs, amp, trace:{t:tt,y:tr}, axis:axes[ai], dur};
+}
+
+/* ---------- tap-tone analysis ---------- */
+function goertzelDb(x, start, len, f, sr, win){
+  const w=2*Math.PI*f/sr, c=2*Math.cos(w); let s1=0,s2=0;
+  for(let n=0;n<len;n++){ const s=x[start+n]*win[n]+c*s1-s2; s2=s1; s1=s; }
+  const p=s1*s1+s2*s2-c*s1*s2;
+  return 10*Math.log10(Math.max(p,1e-20));
+}
+function analyzeTap(x, sr){
+  let mx=0, onset=0;
+  for(let i=0;i<x.length;i++) mx=Math.max(mx,Math.abs(x[i]));
+  if(mx<1e-4) return null;
+  for(let i=0;i<x.length;i++) if(Math.abs(x[i])>0.3*mx){ onset=i; break; }
+  const NF=8192, st=onset+Math.round(0.004*sr);
+  if(st+NF>x.length) return null;
+  const re=new Float64Array(NF), im=new Float64Array(NF);
+  for(let n=0;n<NF;n++) re[n]=x[st+n]*(0.5-0.5*Math.cos(2*Math.PI*n/(NF-1)));
+  fft(re,im);
+  const mag=new Float64Array(NF/2);
+  for(let k=0;k<NF/2;k++) mag[k]=Math.hypot(re[k],im[k]);
+  const k0=Math.ceil(80*NF/sr), k1=Math.min(NF/2-2, Math.floor(12000*NF/sr));
+  let kp=k0; for(let k=k0;k<=k1;k++) if(mag[k]>mag[kp]) kp=k;
+  const a=Math.log(mag[kp-1]+1e-12), b=Math.log(mag[kp]+1e-12), c=Math.log(mag[kp+1]+1e-12);
+  const off=(a-2*b+c)!==0 ? 0.5*(a-c)/(a-2*b+c) : 0;
+  const f=(kp+clamp(off,-0.5,0.5))*sr/NF;
+  const spec={f:[],db:[]}, ref=mag[kp]||1;
+  for(let i=0;i<=220;i++){
+    const fq=80*Math.pow(12000/80,i/220), kk=Math.round(fq*NF/sr);
+    let m=0; for(let j=Math.max(1,kk-1); j<=Math.min(NF/2-1,kk+1); j++) m=Math.max(m,mag[j]);
+    spec.f.push(fq); spec.db.push(20*Math.log10(Math.max(m,1e-9)/ref));
+  }
+  const FL=1024, HOP=256, win=new Float64Array(FL);
+  for(let n=0;n<FL;n++) win[n]=0.5-0.5*Math.cos(2*Math.PI*n/(FL-1));
+  const env={t:[],db:[]};
+  for(let s=onset; s+FL<=x.length; s+=HOP){ env.t.push((s-onset)/sr); env.db.push(goertzelDb(x,s,FL,f,sr,win)); }
+  let imax=0; for(let i=0;i<env.db.length;i++) if(env.db[i]>env.db[imax]) imax=i;
+  const tailN=Math.max(4,Math.floor(env.db.length*0.15));
+  const floor=median(env.db.slice(-tailN));
+  const top=env.db[imax], stop=Math.max(top-35, floor+8);
+  const fx=[], fy=[];
+  for(let i=imax;i<env.db.length;i++){ if(env.db[i]<stop) break; fx.push(env.t[i]); fy.push(env.db[i]); }
+  for(let i=0;i<env.db.length;i++) env.db[i]-=top;
+  let D=null, T60=null, zeta=null, Q=null, fit=null;
+  if(fx.length>=4){
+    const L=linfit(fx,fy); D=-L.b;
+    if(D>0.5){ T60=60/D; zeta=D/(8.686*2*Math.PI*f); Q=1/(2*zeta); fit={t0:fx[0], t1:fx[fx.length-1], a:L.a-top, b:L.b}; }
+  }
+  return {f, D, T60, zeta, Q, spec, env, fit, onset, sr};
+}
+
+/* ---------- pendulum analysis ---------- */
+function analyzePendulum(t, w){
+  const n=t.length; if(n<30) return null;
+  let mean=0; for(const v of w) mean+=v; mean/=n;
+  const y=w.map(v=>v-mean);
+  let mx=0; for(const v of y) mx=Math.max(mx,Math.abs(v));
+  if(mx<15) return {crossings:[], periods:[], peaks:[]};
+  const h=0.1*mx, cr=[]; let armed=false;
+  for(let i=1;i<n;i++){
+    if(y[i]<-h) armed=true;
+    if(armed && y[i-1]<0 && y[i]>=0){ const f=-y[i-1]/(y[i]-y[i-1]); cr.push(t[i-1]+f*(t[i]-t[i-1])); armed=false; }
+  }
+  const periods=[], peaks=[];
+  let i0=0;
+  for(let k=1;k<cr.length;k++){
+    periods.push(cr[k]-cr[k-1]);
+    let pk=0; while(i0<n && t[i0]<cr[k-1]) i0++;
+    for(let i=i0;i<n && t[i]<cr[k];i++) pk=Math.max(pk,Math.abs(y[i]));
+    peaks.push(pk);
+  }
+  return {crossings:cr, periods, peaks};
+}
+function pendulumResult(an, L){
+  if(!an || an.periods.length<2) return null;
+  const T=median(an.periods), pk=median(an.peaks);
+  const th0=(pk/DEG)*T/(2*Math.PI);
+  const T0=T/(1+th0*th0/16);
+  const g=4*Math.PI*Math.PI*L/(T0*T0);
+  const out={T, T0, g, th0Deg:th0*DEG, n:an.periods.length, delta:null, zeta:null};
+  if(an.peaks.length>=4){
+    const xs=an.peaks.map((_,i)=>i), ys=an.peaks.map(v=>Math.log(Math.max(v,1e-6)));
+    const fit=linfit(xs,ys); out.delta=-fit.b; out.zeta=out.delta/Math.sqrt(4*Math.PI*Math.PI+out.delta*out.delta);
+    out.fitA=Math.exp(fit.a); out.fitB=fit.b;
+  }
+  return out;
+}
+
+/* ---------- lift analysis ---------- */
+function analyzeLift(t, a){
+  const n=t.length; if(n<20) return null;
+  const still=new Array(n).fill(false);
+  let j0=0, j1=0, s=0, s2=0;
+  for(let i=0;i<n;i++){
+    while(j1<n && t[j1]<=t[i]+250){ s+=a[j1]; s2+=a[j1]*a[j1]; j1++; }
+    while(t[j0]<t[i]-250){ s-=a[j0]; s2-=a[j0]*a[j0]; j0++; }
+    const c=j1-j0, m=s/c, sd=Math.sqrt(Math.max(0,s2/c-m*m));
+    still[i]= sd<0.05 && Math.abs(a[i])<0.12;
+  }
+  // constant speed reads like rest, so only the start and the end are taken as rest
+  const v=new Float64Array(n);
+  for(let i=1;i<n;i++) v[i]=v[i-1]+0.5*(a[i]+a[i-1])*((t[i]-t[i-1])/1000);
+  let e=n-1; while(e>0 && still[e-1]) e--;
+  if(e>=n-1) e=n-1;
+  let b0=0; while(b0<n-1 && still[b0]) b0++;
+  const drift=v[e]/((t[e]-t[0])||1);
+  for(let k=0;k<n;k++) v[k]= k>e ? 0 : v[k]-drift*(t[k]-t[0]);
+  const hgt=new Float64Array(n);
+  for(let k=1;k<n;k++) hgt[k]=hgt[k-1]+0.5*(v[k]+v[k-1])*((t[k]-t[k-1])/1000);
+  const sm=new Float64Array(n); let q0=0, acc=0;
+  for(let k=0;k<n;k++){ acc+=a[k]; while(t[q0]<t[k]-200){ acc-=a[q0]; q0++; } sm[k]=acc/(k-q0+1); }
+  let jerk=0; for(let k=5;k<n;k++){ const dt=(t[k]-t[k-5])/1000; if(dt>0) jerk=Math.max(jerk,Math.abs((sm[k]-sm[k-5])/dt)); }
+  let vmax=0, amax=0;
+  for(let k=0;k<n;k++){ vmax=Math.max(vmax,Math.abs(v[k])); amax=Math.max(amax,Math.abs(sm[k])); }
+  return {v:Array.from(v), h:Array.from(hgt), travel:hgt[n-1], vmax, amax, jerk, moving:Math.max(0,(t[e]-t[b0])/1000)};
+}
+
+/* ============================================================
+   CHART
+   ============================================================ */
+function setupCanvas(c,h){
+  const dpr=window.devicePixelRatio||1, w=c.clientWidth||320;
+  if(c.width!==Math.round(w*dpr) || c.height!==Math.round(h*dpr)){ c.width=Math.round(w*dpr); c.height=Math.round(h*dpr); c.style.height=h+'px'; }
+  const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function niceTicks(a,b,n){
+  const span=b-a; if(!(span>0)) return [a];
+  const raw=span/n, mag=10**Math.floor(Math.log10(raw)), f=raw/mag;
+  const step=(f<1.5?1:f<3?2:f<7?5:10)*mag, out=[];
+  for(let v=Math.ceil(a/step)*step; v<=b+1e-9; v+=step) out.push(+v.toFixed(10));
+  return out;
+}
+function chart(c,o){
+  const {ctx,w,h}=setupCanvas(c,o.h||180);
+  const m={l:o.ml||40, r:12, t:12, b:24}, pw=w-m.l-m.r, ph=h-m.t-m.b;
+  const X=v=>m.l+(v-o.x[0])/(o.x[1]-o.x[0])*pw, Y=v=>m.t+(1-(v-o.y[0])/(o.y[1]-o.y[0]))*ph;
+  const sans=css('--sans'), muted=css('--muted'), ink=css('--ink');
+  ctx.font='500 12px '+sans; ctx.lineWidth=1;
+  (o.bands||[]).forEach(b=>{
+    ctx.fillStyle=b.fill; ctx.fillRect(X(b.x0),m.t,X(b.x1)-X(b.x0),ph);
+    if(b.label){ ctx.fillStyle=ink; ctx.font='700 12px '+sans; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(b.label,(X(b.x0)+X(b.x1))/2,m.t+3); ctx.font='500 12px '+sans; }
+  });
+  (o.ybands||[]).forEach(b=>{ const y0=clamp(Y(b.y1),m.t,m.t+ph), y1=clamp(Y(b.y0),m.t,m.t+ph); if(y1>y0){ ctx.fillStyle=b.fill; ctx.fillRect(m.l,y0,pw,y1-y0); } });
+  ctx.strokeStyle=css('--grid'); ctx.fillStyle=muted; ctx.textAlign='right'; ctx.textBaseline='middle';
+  (o.yt||niceTicks(o.y[0],o.y[1],4)).forEach(v=>{ const y=Math.round(Y(v))+.5; ctx.beginPath(); ctx.moveTo(m.l,y); ctx.lineTo(w-m.r,y); ctx.stroke(); ctx.fillText(o.yf?o.yf(v):v, m.l-6, y); });
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  (o.xt||niceTicks(o.x[0],o.x[1],5)).forEach(v=>{ const x=X(v); if(x<m.l-1||x>w-m.r+1) return; const tx=String(o.xf?o.xf(v):v), tw=ctx.measureText(tx).width; ctx.textAlign= x+tw/2>w-2 ? 'right' : 'center'; ctx.fillText(tx, x+tw/2>w-2 ? w-2 : x, h-m.b+6); }); ctx.textAlign='center';
+  ctx.strokeStyle=ink; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(m.l,m.t+ph+.5); ctx.lineTo(w-m.r,m.t+ph+.5); ctx.stroke();
+  ctx.save(); ctx.beginPath(); ctx.rect(m.l,m.t-6,pw,ph+12); ctx.clip();
+  (o.hl||[]).forEach(l=>{
+    ctx.save(); if(l.dash) ctx.setLineDash(l.dash); ctx.strokeStyle=l.color||muted; ctx.lineWidth=l.width||1.5;
+    const y=Y(l.y); ctx.beginPath(); ctx.moveTo(m.l,y); ctx.lineTo(w-m.r,y); ctx.stroke(); ctx.restore();
+  });
+  (o.vl||[]).forEach(l=>{
+    ctx.save(); if(l.dash) ctx.setLineDash(l.dash); ctx.strokeStyle=l.color||ink; ctx.lineWidth=l.width||2;
+    const x=X(l.x); ctx.beginPath(); ctx.moveTo(x,m.t); ctx.lineTo(x,m.t+ph); ctx.stroke(); ctx.restore();
+  });
+  (o.s||[]).forEach(s=>{
+    ctx.save(); if(s.dash) ctx.setLineDash(s.dash);
+    ctx.strokeStyle=s.color||ink; ctx.lineWidth=s.width||2; ctx.lineJoin='round'; ctx.beginPath();
+    let started=false;
+    for(let i=0;i<s.xs.length;i++){ const yv=s.ys[i]; if(yv==null||!isFinite(yv)){ started=false; continue; } const px=X(s.xs[i]), py=Y(yv); started?ctx.lineTo(px,py):ctx.moveTo(px,py); started=true; }
+    ctx.stroke(); ctx.restore();
+  });
+  (o.dots||[]).forEach(d=>{
+    ctx.beginPath(); ctx.arc(X(d.x),Y(d.y),d.r||5,0,7); ctx.fillStyle=d.color||ink; ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle=d.ring||css('--card'); ctx.stroke();
+  });
+  ctx.restore();
+  const hasData=(o.s||[]).some(q=>q.xs && q.xs.length>1 && !q.ref) || (o.dots||[]).length;
+  if(!hasData && o.empty!==false){
+    const msg=(o.empty||'No data yet · tap Start').toUpperCase(); ctx.font='700 14px '+css('--cond'); ctx.textAlign='center'; ctx.textBaseline='middle';
+    const tw=ctx.measureText(msg).width; ctx.fillStyle=css('--card'); ctx.fillRect(m.l+pw/2-tw/2-10, m.t+ph/2-12, tw+20, 24);
+    ctx.fillStyle=css('--muted'); ctx.fillText(msg, m.l+pw/2, m.t+ph/2);
+  }
+  (o.labels||[]).forEach(l=>{
+    ctx.fillStyle=ink; ctx.font='700 12.5px '+sans; ctx.textBaseline='bottom';
+    let x=X(l.x)+(l.dx||0); ctx.textAlign=l.align||'left';
+    const tw=ctx.measureText(l.text).width;
+    if(ctx.textAlign==='left' && x+tw>w-m.r){ ctx.textAlign='right'; x=X(l.x)-(l.dx||0); }
+    ctx.fillText(l.text, x, clamp(Y(l.y)+(l.dy||-6), m.t+12, m.t+ph));
+  });
+}
+
+/* ============================================================
+   SENSORS
+   ============================================================ */
+const Motion = {
+  on:false, subs:new Set(), ticks:[], rate:0, count:0,
+  // call synchronously inside a tap handler (iOS rule)
+  ask(){
+    let p=Promise.resolve('granted');
+    if(window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission==='function'){
+      try{ p=DeviceMotionEvent.requestPermission(); }catch(e){ p=Promise.reject(e); }
+    }
+    return p.then(r=>{ if(r!=='granted') throw new Error('Motion access was not allowed.'); this.start(); });
+  },
+  start(){ if(this.on) return; this.on=true; window.addEventListener('devicemotion', e=>this.handle(e)); },
+  handle(e){
+    const a=e.accelerationIncludingGravity;
+    if(!a || a.x==null) return;
+    const t=performance.now();
+    this.ticks.push(t); if(this.ticks.length>121) this.ticks.shift();
+    if(this.ticks.length>10) this.rate=(this.ticks.length-1)*1000/(t-this.ticks[0]);
+    this.count++;
+    const r=e.rotationRate||{};
+    const s={t, x:a.x, y:a.y, z:a.z, ra:r.alpha||0, rb:r.beta||0, rg:r.gamma||0};
+    this.subs.forEach(f=>f(s));
+  }
+};
+function watchForData(statusEl){
+  const c0=Motion.count;
+  setTimeout(()=>{ if(Motion.count===c0) statusEl.innerHTML='<b>No motion data yet.</b> Open the https link in Safari and tap Allow when asked. If you tapped Don\'t Allow, close the tab and open the page again.'; }, 2500);
+}
+let wakeLock=null, wantWake=false;
+async function keepAwake(on){
+  wantWake=on;
+  try{
+    if(on && 'wakeLock' in navigator && !wakeLock){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; }); }
+    if(!on && wakeLock){ await wakeLock.release(); wakeLock=null; }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wantWake) keepAwake(true); });
+
+/* ---------- CSV ---------- */
+function saveCSV(name,text){
+  const blob=new Blob([text],{type:'text/csv'});
+  try{
+    const file=new File([blob],name,{type:'text/csv'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file],title:name}).catch(()=>{}); return; }
+  }catch(e){}
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+}
+const stamp=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+const fmt=(v,d)=>v==null||!isFinite(v)?'':(+v).toFixed(d);
+function fmtDur(ms){ const s=Math.round(ms/1000), m=Math.floor(s/60); return m? `${m} min ${s%60} s` : `${s} s`; }
+function fmtClock(ms){ const s=Math.floor(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function setGo(btn,running,startText){ btn.textContent=startText; btn.disabled=running; const st=$(btn.dataset.stop); if(st) st.disabled=!running; }
+
+/* ============================================================
+   RIDE
+   ============================================================ */
+const R = { running:false, started:false, thr:4 };
+function resetRide(){
+  Object.assign(R,{ grav:new GravityTracker(1.0), t0:performance.now(), prevT:null,
+    S:{t:[],v:[],r:[],fix:[]}, win:[], winSum:0, bandMs:[0,0,0,0,0,0], sumSq:0, n:0, curRms:null,
+    bumps:[], ev:null, lastBumpT:-1e9, fixes:[], lastFix:null, lastGood:null, segSum:0, segN:0, segs:[], dist:0, follow:true, tEnd:null, gpsMsg:null });
+  clearMapLayers();
+}
+function onRideSample(s){
+  if(!R.running) return;
+  const v=R.grav.step(s), t=s.t-R.t0, v2=v*v;
+  R.win.push([t,v2]); R.winSum+=v2;
+  while(R.win.length && R.win[0][0] < t-5000) R.winSum-=R.win.shift()[1];
+  const rms=Math.sqrt(Math.max(0,R.winSum)/R.win.length), settled=t>3000;
+  if(settled){
+    if(R.prevT!=null){ const dt=t-R.prevT; if(dt>0 && dt<500) R.bandMs[bandOf(rms)]+=dt; }
+    R.prevT=t; R.sumSq+=v2; R.n++; R.segSum+=v2; R.segN++; R.curRms=rms;
+    const av=Math.abs(v);
+    if(!R.ev){ if(av>R.thr && t-R.lastBumpT>1000) R.ev={t, peak:av, sign:Math.sign(v)}; }
+    else {
+      if(av>R.ev.peak){ R.ev.peak=av; R.ev.sign=Math.sign(v); }
+      if(t-R.ev.t>300){ commitBump(R.ev); R.lastBumpT=t; R.ev=null; }
+    }
+  }
+  R.S.t.push(t); R.S.v.push(v); R.S.r.push(settled?rms:NaN); R.S.fix.push(R.fixes.length-1);
+}
+Motion.subs.add(onRideSample);
+function commitBump(ev){
+  const f=R.lastFix;
+  const b={n:R.bumps.length+1, t:ev.t, peak:ev.peak, sign:ev.sign, lat:f?f.lat:null, lon:f?f.lon:null, spd:f&&f.spd!=null?f.spd*3.6:null};
+  R.bumps.push(b); addBumpMarker(b);
+}
+function onFix(pos){
+  if(!R.running) return;
+  const c=pos.coords;
+  const f={t:performance.now()-R.t0, lat:c.latitude, lon:c.longitude, acc:c.accuracy, spd:(c.speed!=null && c.speed>=0)?c.speed:null};
+  R.fixes.push(f); R.lastFix=f; R.gpsMsg=null;
+  if(f.acc>35) return;
+  if(!R.lastGood){ R.lastGood=f; R.segSum=0; R.segN=0; centreMap(f,true); return; }
+  const d=haversine(R.lastGood,f);
+  if(d<3) return;
+  if(f.spd==null){ const dt=(f.t-R.lastGood.t)/1000; if(dt>0) f.spd=d/dt; }
+  const rms=R.segN? Math.sqrt(R.segSum/R.segN) : 0;
+  const seg={a:R.lastGood, b:f, rms, band:bandOf(rms), d};
+  R.segs.push(seg); R.dist+=d; drawSeg(seg);
+  R.lastGood=f; R.segSum=0; R.segN=0;
+  if(R.follow) centreMap(f,false);
+}
+function onFixErr(err){ R.gpsMsg = err.code===1 ? 'Location not allowed: no map, but comfort still works.' : 'Waiting for GPS…'; }
+$('rideBtnStop').addEventListener('click',()=>{ if(R.running) stopRide(); });
+$('rideBtn').addEventListener('click',()=>{
+  if(R.running){ stopRide(); return; }
+  const st=$('rideStatus');
+  if(!Busy.take('ride',st)) return;
+  const perm=Motion.ask();
+  resetRide(); R.running=true; R.started=true;
+  if('geolocation' in navigator) R.watch=navigator.geolocation.watchPosition(onFix,onFixErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  else R.gpsMsg='No GPS in this browser.';
+  keepAwake(true);
+  setGo($('rideBtn'),true,'Start ride','Stop ride'); $('rideCsv').disabled=true;
+  setBand('b-ride',{state:'rec',label:'Finding down…',num:'–'});
+  st.textContent='Keep the phone still for 3 s while it finds which way is down.';
+  pending('b-ride',perm).then(()=>watchForData(st)).catch(e=>{ st.innerHTML='<b>'+e.message+'</b> Close the tab, open the page again and tap Allow.'; stopRide(); });
+  ensureMap(); requestAnimationFrame(rideFrame);
+});
+function stopRide(){ bandProgress('b-ride',null);
+  R.running=false; R.tEnd=performance.now()-R.t0;
+  if(R.watch!=null) navigator.geolocation.clearWatch(R.watch); R.watch=null;
+  keepAwake(false); Busy.free('ride');
+  setGo($('rideBtn'),false,'New ride');
+  $('rideCsv').disabled=!R.S || !R.S.t.length;
+  setBand('b-ride',{state:'done',label:'Whole trip'});
+  $('rideStatus').innerHTML=`Ride stopped after <b>${fmtDur(R.tEnd)}</b>. The summary is below.`;
+  renderRide(true);
+  if(R.n){ const o=Math.sqrt(R.sumSq/R.n); setBand('b-ride',{num:o.toFixed(2)}); paintComfort(o); kitNote('ride',`${o.toFixed(2)} m/s² · ${R.bumps.length} bump${R.bumps.length===1?'':'s'} · ${(R.dist/1000).toFixed(1)} km`); }
+}
+$('thr').addEventListener('input',e=>{ R.thr=+e.target.value; $('thrV').textContent=R.thr.toFixed(1); $('thrG').textContent=(R.thr/9.81).toFixed(2); renderTrace(); });
+$('thrBtn').addEventListener('click',()=>{ const hidden=$('thrBox').classList.toggle('hide'); $('thrBtn').setAttribute('aria-expanded', String(!hidden)); });
+$('recentre').addEventListener('click',()=>{ R.follow=true; const f=R.lastGood||R.lastFix; if(f) centreMap(f,true); });
+let lastFrame=0, lastSummary=0;
+function rideFrame(ts){
+  if(R.running) requestAnimationFrame(rideFrame);
+  if(ts-lastFrame<66) return; lastFrame=ts;
+  renderRide(false);
+}
+function paintComfort(rms){
+  const b=bandOf(rms), el=$('bandNow');
+  el.className='verdict'+(b>=3?' fail':b<=1?' pass':''); el.innerHTML=(b>=3?svgIcon(CROSS,3):b<=1?svgIcon(CHECK,3):'')+BANDS[b].name;
+  $('ptr').style.left=(scalePos(rms)*100)+'%';
+}
+function renderRide(force){
+  if(!R.started) return;
+  const now=R.running? performance.now()-R.t0 : R.tEnd, rms=R.curRms;
+  if(R.running){
+    bandProgress('b-ride', rms==null ? clamp(now/3000,0,1) : null);
+    if(rms==null){ setBand('b-ride',{label:'Finding down…'}); const c=$('bandNow'); c.className='verdict'; c.textContent='Keep still · calibrating'; }
+    else { setBand('b-ride',{label:`Recording ${fmtClock(now)}`, num:rms.toFixed(2)}); paintComfort(rms); }
+  }
+  const f=R.lastFix;
+  $('spd').textContent = f && f.spd!=null ? Math.round(f.spd*3.6) : '–';
+  $('bumpN').textContent=R.bumps.length;
+  $('dist').textContent=(R.dist/1000).toFixed(2);
+  $('bumpRate').textContent= R.dist>200 ? `bumps · ${(R.bumps.length/(R.dist/1000)).toFixed(1)}/km` : 'bumps';
+  if(R.running && rms!=null){
+    const gps = R.gpsMsg || (f? `GPS ±${Math.round(f.acc)} m` : 'Waiting for GPS…');
+    $('rideStatus').innerHTML=`${Math.round(Motion.rate)||'–'} readings/s · ${gps}${wakeLock?' · screen kept on':''}`;
+  }
+  renderTrace();
+  if(force || now-lastSummary>1000){ lastSummary=now; renderSummary(now); }
+}
+function renderTrace(){
+  const thrL=[{y:R.thr,color:css('--ink'),dash:[5,4]},{y:-R.thr,color:css('--ink'),dash:[5,4]}];
+  if(!R.S){ chart($('traceC'),{h:170,x:[-15,0],y:[-6,6],xf:v=>v===0?'now':v+' s',hl:thrL}); return; }
+  const T=R.S.t, V=R.S.v, end=R.running? performance.now()-R.t0 : (R.tEnd||0);
+  let i=T.length-1; while(i>0 && T[i-1]>end-15000) i--;
+  const xs=[], ys=[]; let mx=0;
+  for(let j=Math.max(0,i);j<T.length;j++){ xs.push((T[j]-end)/1000); ys.push(V[j]); mx=Math.max(mx,Math.abs(V[j])); }
+  const lim=Math.max(6, R.thr*1.3, mx*1.1);
+  const dots=R.bumps.filter(b=>b.t>end-15000).map(b=>({x:(b.t-end)/1000, y:clamp(b.sign*b.peak,-lim,lim), color:css('--alert'), ring:css('--ink'), r:6}));
+  chart($('traceC'),{h:170, x:[-15,0], y:[-lim,lim], xf:v=>v===0?'now':v+' s', hl:thrL, s:[{xs,ys,color:css('--ink'),width:1.5}], dots});
+}
+function renderSummary(now){
+  const tot=R.bandMs.reduce((a,b)=>a+b,0), overall=R.n? Math.sqrt(R.sumSq/R.n) : null;
+  $('sumCap').innerHTML = overall==null ? 'Collecting…' :
+    `<b>${fmtDur(now)}</b> · ${(R.dist/1000).toFixed(2)} km · whole-trip RMS <b>${overall.toFixed(2)} m/s²</b> (${BANDS[bandOf(overall)].name.toLowerCase()}) · ${R.bumps.length} bump${R.bumps.length===1?'':'s'}`;
+  const st=$('bandStack'); st.innerHTML='';
+  const tb=$('bandTable').tBodies[0]; tb.innerHTML='';
+  BANDS.forEach((b,i)=>{
+    const share=tot? R.bandMs[i]/tot : 0;
+    if(share>0){ const d=document.createElement('div'); d.style.width=(share*100)+'%'; d.style.background=bandColor(i); d.title=`${b.name}: ${Math.round(share*100)}%`; st.appendChild(d); }
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sw" style="background:${bandColor(i)}"></span>${b.name}</td><td class="r">${b.range}</td><td class="r">${fmtClock(R.bandMs[i])}</td><td class="r">${tot?Math.round(share*100)+'%':'–'}</td>`;
+    tb.appendChild(tr);
+  });
+  const worst=R.bumps.slice().sort((a,b)=>b.peak-a.peak).slice(0,5);
+  $('bumpTable').tBodies[0].innerHTML = worst.length ? worst.map(b=>`<tr><td>${b.n}</td><td class="r">${fmtClock(b.t)}</td><td class="r">${b.peak.toFixed(1)} m/s² (${(b.peak/9.81).toFixed(2)} g)</td><td class="r">${b.spd!=null?Math.round(b.spd)+' km/h':'–'}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="cap">None yet.</td></tr>';
+}
+$('rideCsv').addEventListener('click',()=>{
+  const S=R.S, bump=new Map(R.bumps.map(b=>[b.t,b.peak]));
+  const lines=['time_s,vertical_ms2,rms5s_ms2,comfort_band,lat,lon,gps_accuracy_m,speed_kmh,bump_peak_ms2'];
+  for(let i=0;i<S.t.length;i++){
+    const f=S.fix[i]>=0? R.fixes[S.fix[i]] : null, r=S.r[i];
+    lines.push([fmt(S.t[i]/1000,3), fmt(S.v[i],3), isNaN(r)?'':fmt(r,3), isNaN(r)?'':'"'+BANDS[bandOf(r)].name+'"',
+      f?fmt(f.lat,6):'', f?fmt(f.lon,6):'', f?fmt(f.acc,0):'', f&&f.spd!=null?fmt(f.spd*3.6,1):'', bump.has(S.t[i])?fmt(bump.get(S.t[i]),2):''].join(','));
+  }
+  saveCSV(`ride_${stamp()}.csv`, lines.join('\n'));
+});
+/* map */
+let map=null, layer=null, useFallback=false;
+function ensureMap(){
+  if(map || useFallback) return;
+  if(!window.L){ useFallback=true; $('mapLoad').classList.add('gone'); $('map').classList.add('hide'); $('mapFallback').style.display='block'; drawFallback(); return; }
+  map=L.map('map',{zoomControl:true, attributionControl:true}).setView([20.6,78.9],4);
+  const tl=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+  let tErr=0; tl.on('load',()=>$('mapLoad').classList.add('gone')); tl.on('tileerror',()=>{ if(++tErr>6){ $('mapLoad').querySelector('span').textContent='Map offline · route still recorded'; $('mapLoad').querySelector('i').style.display='none'; } });
+  layer=L.layerGroup().addTo(map);
+  map.on('dragstart',()=>{ R.follow=false; });
+}
+function clearMapLayers(){ if(layer) layer.clearLayers(); if(useFallback) drawFallback(); }
+function centreMap(f,zoom){ if(map) zoom? map.setView([f.lat,f.lon],17) : map.panTo([f.lat,f.lon]); }
+function drawSeg(s){
+  if(useFallback){ drawFallback(); return; }
+  if(!layer) return;
+  L.polyline([[s.a.lat,s.a.lon],[s.b.lat,s.b.lon]],{color:css('--casing'), weight:11, opacity:.85, lineCap:'round', interactive:false}).addTo(layer);
+  L.polyline([[s.a.lat,s.a.lon],[s.b.lat,s.b.lon]],{color:bandColor(s.band), weight:7, opacity:1, lineCap:'round'})
+    .bindPopup(`${BANDS[s.band].name}<br>RMS ${s.rms.toFixed(2)} m/s²`).addTo(layer);
+  layer.eachLayer(l=>{ if(l.options.radius) l.bringToFront(); });
+}
+function addBumpMarker(b){
+  if(b.lat==null) return;
+  if(useFallback){ drawFallback(); return; }
+  if(!layer) return;
+  L.circleMarker([b.lat,b.lon],{radius:7, color:css('--hv'), weight:3, fillColor:css('--casing'), fillOpacity:1})
+    .bindPopup(`<b>Bump ${b.n}</b><br>${b.peak.toFixed(1)} m/s² (${(b.peak/9.81).toFixed(2)} g)<br>${b.spd!=null?Math.round(b.spd)+' km/h, ':''}${fmtClock(b.t)} into the ride`).addTo(layer);
+}
+function drawFallback(){
+  const c=$('mapFallback'); const {ctx,w,h}=setupCanvas(c,320);
+  const pts=(R.segs||[]).flatMap(s=>[s.a,s.b]).concat((R.bumps||[]).filter(b=>b.lat!=null));
+  ctx.fillStyle=css('--muted'); ctx.font='500 14px '+css('--sans'); ctx.textAlign='center';
+  if(pts.length<2){ ctx.fillText('Map tiles could not load. The route will be drawn here.',w/2,h/2); return; }
+  let la0=Infinity,la1=-Infinity,lo0=Infinity,lo1=-Infinity;
+  pts.forEach(p=>{ la0=Math.min(la0,p.lat); la1=Math.max(la1,p.lat); lo0=Math.min(lo0,p.lon); lo1=Math.max(lo1,p.lon); });
+  const k=Math.cos(((la0+la1)/2)*Math.PI/180), sx=(lo1-lo0)*k||1e-5, sy=(la1-la0)||1e-5, sc=Math.min((w-30)/sx,(h-30)/sy);
+  const P=p=>[w/2+((p.lon-(lo0+lo1)/2)*k)*sc, h/2-(p.lat-(la0+la1)/2)*sc];
+  ctx.lineCap='round'; ctx.lineWidth=7;
+  R.segs.forEach(s=>{ const a=P(s.a), b=P(s.b); ctx.strokeStyle=bandColor(s.band); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); });
+  R.bumps.filter(b=>b.lat!=null).forEach(b=>{ const p=P(b); ctx.beginPath(); ctx.arc(p[0],p[1],6,0,7); ctx.fillStyle=css('--casing'); ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=css('--hv'); ctx.stroke(); });
+}
+
+/* ============================================================
+   RIDE COMFORT
+   ============================================================ */
+const VEH={bus:'Bus',metro:'Metro',car:'Car',auto:'Auto'};
+const HARSH=2.5;
+const CM={ on:false, started:false, veh:'bus' };
+function resetComfort(){
+  Object.assign(CM,{ g:null, last:0, t0:performance.now(), sA:0, sC:0, win:[], sum:[0,0,0], aV:null, rz:null, rh:null, bandMs:[0,0,0,0,0,0], prevT:null,
+    tot:[0,0,0], n:0, trail:[], ev:null, events:[], lastEvT:-1e9, S:{t:[],z:[],a:[],c:[],av:[]}, hist:[], lastHist:-1e9, fixes:[], lastPos:null, tEnd:null, gpsMsg:null, saved:false });
+}
+Motion.subs.add(s=>{
+  if(!CM.on) return;
+  const a=[s.x,s.y,s.z], t=s.t-CM.t0;
+  if(!CM.g){ CM.g=a.slice(); CM.last=s.t; return; }
+  const dt=Math.min(0.2,Math.max(0,(s.t-CM.last)/1000)); CM.last=s.t;
+  // gravity follows slowly (~3 s) and almost freezes during a push, so braking isn't mistaken for a tilt
+  const tauG= t<3000 ? 0.3 : (Math.hypot(CM.sA,CM.sC)>0.8 ? 30 : 3), k=dt/(tauG+dt); for(let i=0;i<3;i++) CM.g[i]+=k*(a[i]-CM.g[i]);
+  const gm=Math.hypot(CM.g[0],CM.g[1],CM.g[2])||1, u=CM.g.map(v=>v/gm), d=a.map((v,i)=>v-CM.g[i]);
+  const vz=d[0]*u[0]+d[1]*u[1]+d[2]*u[2], dh=d.map((v,i)=>v-vz*u[i]);
+  // forward = the phone's long edge when it lies flat-ish, else out of its back (upright in a holder)
+  const b= Math.abs(u[1])<0.7 ? [0,1,0] : [0,0,-1], bu=b[0]*u[0]+b[1]*u[1]+b[2]*u[2];
+  let f=b.map((v,i)=>v-bu*u[i]); const fm=Math.hypot(f[0],f[1],f[2])||1; f=f.map(v=>v/fm);
+  const l=[u[1]*f[2]-u[2]*f[1], u[2]*f[0]-u[0]*f[2], u[0]*f[1]-u[1]*f[0]];
+  const along=dh[0]*f[0]+dh[1]*f[1]+dh[2]*f[2], across=dh[0]*l[0]+dh[1]*l[1]+dh[2]*l[2];
+  const ks=dt/(0.3+dt); CM.sA+=ks*(along-CM.sA); CM.sC+=ks*(across-CM.sC);   // pushes: slower than ~0.5 s
+  const fa=along-CM.sA, fc=across-CM.sC, e=[vz*vz, fa*fa, fc*fc];             // vibration: the rest
+  CM.win.push([t,e]); for(let i=0;i<3;i++) CM.sum[i]+=e[i];
+  while(CM.win.length && CM.win[0][0]<t-5000){ const o=CM.win.shift()[1]; for(let i=0;i<3;i++) CM.sum[i]-=o[i]; }
+  const nW=CM.win.length, rz=Math.sqrt(Math.max(0,CM.sum[0])/nW), rx=Math.sqrt(Math.max(0,CM.sum[1])/nW), ry=Math.sqrt(Math.max(0,CM.sum[2])/nW);
+  if(t<3000) return;
+  const aV=Math.sqrt(1.96*(rx*rx+ry*ry)+rz*rz);
+  CM.aV=aV; CM.rz=rz; CM.rh=Math.hypot(rx,ry);
+  if(CM.prevT!=null){ const dd=t-CM.prevT; if(dd>0&&dd<500) CM.bandMs[bandOf(aV)]+=dd; } CM.prevT=t;
+  for(let i=0;i<3;i++) CM.tot[i]+=e[i]; CM.n++;
+  CM.S.t.push(t); CM.S.z.push(vz); CM.S.a.push(CM.sA); CM.S.c.push(CM.sC); CM.S.av.push(aV);
+  if(t-CM.lastHist>=500){ CM.hist.push([t/1000,aV]); CM.lastHist=t; }
+  CM.trail.push([t,CM.sC,CM.sA]); while(CM.trail.length && CM.trail[0][0]<t-60000) CM.trail.shift();
+  const m=Math.hypot(CM.sA,CM.sC);
+  if(!CM.ev){ if(m>HARSH && t-CM.lastEvT>1500) CM.ev={t0:t, peak:m, pa:CM.sA, pc:CM.sC}; }
+  else {
+    if(m>CM.ev.peak){ CM.ev.peak=m; CM.ev.pa=CM.sA; CM.ev.pc=CM.sC; }
+    if(m<HARSH*0.7){ if(t-CM.ev.t0>=300) commitHarsh(CM.ev,t); CM.ev=null; CM.lastEvT=t; }
+  }
+});
+function commitHarsh(ev,tEnd){
+  const side=Math.abs(ev.pc)>Math.abs(ev.pa);
+  const before=CM.fixes.filter(f=>f.spd!=null && f.t<=ev.t0).pop();
+  CM.events.push({n:CM.events.length+1, t:ev.t0, tEnd, peak:ev.peak, x:ev.pc, y:ev.pa, type: side?'Sharp turn':null, spd: before? before.spd*3.6 : null, v0: before? before.spd : null});
+}
+function classifyPending(nowT){
+  CM.events.forEach(e=>{
+    if(e.type) return;
+    const after=CM.fixes.filter(f=>f.spd!=null && f.t>=e.tEnd+500 && f.t<=e.tEnd+4000).pop();
+    if(after && e.v0!=null) e.type = after.spd < e.v0-0.3 ? 'Hard brake' : after.spd > e.v0+0.3 ? 'Hard start' : 'Hard push';
+    else if(nowT>e.tEnd+4000 || !CM.on) e.type='Hard brake or start';
+  });
+}
+function onCmFix(pos){
+  if(!CM.on) return;
+  const c=pos.coords, t=performance.now()-CM.t0;
+  let spd=(c.speed!=null && c.speed>=0)? c.speed : null;
+  if(spd==null && CM.lastPos && c.accuracy<=35){ const dt=(t-CM.lastPos.t)/1000; if(dt>0) spd=haversine(CM.lastPos,{lat:c.latitude,lon:c.longitude})/dt; }
+  if(c.accuracy<=35) CM.lastPos={t,lat:c.latitude,lon:c.longitude};
+  CM.fixes.push({t,spd,acc:c.accuracy}); CM.gpsMsg=null;
+  classifyPending(t);
+}
+document.querySelectorAll('#comfort .seg button').forEach(b=>b.addEventListener('click',()=>{
+  if(CM.on) return;
+  CM.veh=b.dataset.veh;
+  document.querySelectorAll('#comfort .seg button').forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+  if(!CM.started) setBand('b-cm',{label:'Ready · '+VEH[CM.veh]});
+  renderComfort(true);
+}));
+$('cmBtnStop').addEventListener('click',()=>{ if(CM.on) stopComfort(); });
+$('cmBtn').addEventListener('click',()=>{
+  if(CM.on) return;
+  const st=$('cmStatus');
+  if(!Busy.take('comfort',st)) return;
+  const perm=Motion.ask();
+  resetComfort(); CM.on=true; CM.started=true;
+  if('geolocation' in navigator) CM.watch=navigator.geolocation.watchPosition(onCmFix,e=>{ CM.gpsMsg= e.code===1?'Location off: no speed, turns still work':'Waiting for GPS…'; },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  keepAwake(true); setGo($('cmBtn'),true,'Start trip'); $('cmCsv').disabled=true; $('cmSave').disabled=true;
+  document.querySelectorAll('#comfort .seg button').forEach(x=>x.disabled=true);
+  setBand('b-cm',{state:'rec',label:'Finding down · '+VEH[CM.veh],num:'–'});
+  st.textContent='Keep the phone still for 3 s while it finds its directions.';
+  pending('b-cm',perm).then(()=>watchForData(st)).catch(e=>{ st.innerHTML='<b>'+e.message+'</b> Close the tab, open the page again and tap Allow.'; stopComfort(); });
+  requestAnimationFrame(comfortFrame);
+});
+function stopComfort(){ bandProgress('b-cm',null);
+  CM.on=false; CM.tEnd=performance.now()-CM.t0;
+  if(CM.watch!=null) navigator.geolocation.clearWatch(CM.watch); CM.watch=null;
+  classifyPending(CM.tEnd);
+  keepAwake(false); Busy.free('comfort'); setGo($('cmBtn'),false,'New trip');
+  document.querySelectorAll('#comfort .seg button').forEach(x=>x.disabled=false);
+  $('cmCsv').disabled=!CM.S.t.length; $('cmSave').disabled=!CM.n;
+  const sum=cmSummary();
+  if(sum){ setBand('b-cm',{state:'done',label:`Whole trip · ${VEH[CM.veh]} · ${fmtDur(CM.tEnd)}`,num:sum.aV.toFixed(2)}); cmPaint(sum.aV); kitNote('comfort',`${VEH[CM.veh]} · ${sum.aV.toFixed(2)} m/s² · ${BANDS[bandOf(sum.aV)].short}`); }
+  else setBand('b-cm',{state:'alert',label:'Too short to rate'});
+  $('cmStatus').innerHTML = sum ? `Trip stopped. <b>${Math.round(sum.okShare*100)} %</b> of the time was comfortable; ${CM.events.length} harsh move${CM.events.length===1?'':'s'}.` : 'Ride for at least 10 s.';
+  renderComfort(true);
+}
+function cmSummary(){
+  if(!CM.n) return null;
+  const tot=CM.bandMs.reduce((a,b)=>a+b,0)||1, dur=(CM.tEnd!=null?CM.tEnd:performance.now()-CM.t0);
+  const aV=Math.sqrt(1.96*(CM.tot[1]+CM.tot[2])/CM.n + CM.tot[0]/CM.n);
+  return {veh:CM.veh, at:new Date().toISOString(), dur, aV, okShare:(CM.bandMs[0]+CM.bandMs[1])/tot, harsh:CM.events.length, per10:CM.events.length/Math.max(dur/600000,1/60)};
+}
+function cmPaint(v){
+  const b=bandOf(v), el=$('cmVerdict');
+  el.className='verdict'+(b>=3?' fail':b<=1?' pass':''); el.innerHTML=(b>=3?svgIcon(CROSS,3):b<=1?svgIcon(CHECK,3):'')+BANDS[b].name;
+  $('cmPtr').style.left=(scalePos(v)*100)+'%';
+}
+let cmLast=0, cmLastSlow=0;
+function comfortFrame(ts){
+  if(CM.on) requestAnimationFrame(comfortFrame);
+  if(ts-cmLast<80) return; cmLast=ts;
+  renderComfort(ts-cmLastSlow>1000); if(ts-cmLastSlow>1000) cmLastSlow=ts;
+}
+function renderComfort(full){
+  const now=CM.on? performance.now()-CM.t0 : (CM.tEnd||0);
+  if(CM.on){
+    bandProgress('b-cm', CM.aV==null ? clamp(now/3000,0,1) : null);
+    if(CM.aV==null){ setBand('b-cm',{label:'Finding down · '+VEH[CM.veh]}); const c=$('cmVerdict'); c.className='verdict'; c.textContent='Keep still · calibrating'; }
+    else { setBand('b-cm',{label:`Recording ${fmtClock(now)} · ${VEH[CM.veh]}`,num:CM.aV.toFixed(2)}); cmPaint(CM.aV); }
+    const f=CM.fixes[CM.fixes.length-1];
+    if(CM.aV!=null) $('cmStatus').innerHTML=`${Math.round(Motion.rate)||'–'} readings/s · ${CM.gpsMsg || (f&&f.spd!=null? Math.round(f.spd*3.6)+' km/h (GPS)' : 'Waiting for GPS…')}${wakeLock?' · screen kept on':''}`;
+  }
+  if(CM.started){ $('cmZ').textContent=CM.rz!=null?CM.rz.toFixed(2):'–'; $('cmXY').textContent=CM.rh!=null?CM.rh.toFixed(2):'–'; $('cmH').textContent=CM.events.length; }
+  drawGG();
+  if(!full) return;
+  // trip chart with comfort bands
+  const H=CM.hist||[], tmax=Math.max(60, Math.ceil((now/1000)/30)*30), ymax=Math.min(3.5,Math.max(1.2,...H.map(p=>p[1]))*1.15);
+  const edges=[0,0.315,0.63,1.0,1.6,2.5,3.5];
+  chart($('cmTripC'),{h:170, x:[0,tmax], y:[0,ymax], ml:40, xf:v=> v>=60? (v/60)+' min' : v+' s', yf:v=>v.toFixed(1),
+    xt:(()=>{ const st= tmax<=120?30 : tmax<=300?60 : tmax<=900?120 : 300, a=[]; for(let v=0;v<=tmax;v+=st) a.push(v); return a; })(),
+    ybands:edges.slice(0,6).map((e,i)=>({y0:e,y1:edges[i+1],fill:bandColor(i)+'40'})),
+    s:[{xs:H.map(p=>p[0]), ys:H.map(p=>p[1]), color:css('--ink'), width:2}],
+    dots:(CM.events||[]).map(e=>({x:e.t/1000, y:ymax*0.94, color:css('--alert'), ring:css('--ink'), r:5}))});
+  const ev=(CM.events||[]).slice().reverse().slice(0,8);
+  $('cmEvT').tBodies[0].innerHTML = ev.length ? ev.map(e=>`<tr><td>${e.n}</td><td class="r">${fmtClock(e.t)}</td><td>${e.type||'…'}</td><td class="r">${e.peak.toFixed(1)} m/s²</td><td class="r">${e.spd!=null?Math.round(e.spd)+' km/h':'–'}</td></tr>`).join('') : '<tr><td colspan="5" class="cap">None yet.</td></tr>';
+  renderCmCmp();
+}
+function drawGG(){
+  const c=$('cmGG'), size=Math.min(c.clientWidth||300,340); const {ctx,w,h}=setupCanvas(c,size);
+  const cx=w/2, cy=h/2, R=Math.min(w,h)/2-22, S=R/4, ink=css('--ink'), sans=css('--sans');
+  ctx.strokeStyle=css('--grid'); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy); ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
+  ctx.strokeStyle=ink; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,S*1,0,7); ctx.stroke();
+  ctx.save(); ctx.setLineDash([6,5]); ctx.strokeStyle=css('--alert'); ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(cx,cy,S*HARSH,0,7); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle=ink; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+  ctx.fillStyle=css('--muted'); ctx.font='700 12px '+sans; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('forward–back', cx, cy-R-4); ctx.textBaseline='top'; ctx.fillText('4 m/s²', cx, cy+R+4);
+  ctx.save(); ctx.translate(cx+R+12,cy); ctx.rotate(Math.PI/2); ctx.textBaseline='middle'; ctx.fillText('sideways',0,0); ctx.restore();
+  ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillText('1', cx+S+3, cy-2); ctx.fillText('2.5', cx+S*HARSH+3, cy-2);
+  const tr=CM.trail||[], tNow=tr.length? tr[tr.length-1][0] : 0;
+  tr.forEach(([t,x,y],i)=>{ if(i%2) return; const age=(tNow-t)/60000; ctx.globalAlpha=0.65*(1-age)+0.08; ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(cx+clamp(x,-4,4)*S, cy-clamp(y,-4,4)*S, 2.2,0,7); ctx.fill(); }); ctx.globalAlpha=1;
+  (CM.events||[]).filter(e=>e.t>=tNow-60000).forEach(e=>{ ctx.beginPath(); ctx.arc(cx+clamp(e.x,-4,4)*S, cy-clamp(e.y,-4,4)*S, 6,0,7); ctx.fillStyle=css('--alert'); ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=ink; ctx.stroke(); });
+  if(tr.length){ const [,x,y]=tr[tr.length-1]; ctx.beginPath(); ctx.arc(cx+clamp(x,-4,4)*S, cy-clamp(y,-4,4)*S, 8,0,7); ctx.fillStyle=css('--hv'); ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=ink; ctx.stroke(); }
+}
+const TRIP_KEY='fieldkit.trips.v1'; let memTrips=null;
+function loadTrips(){ if(memTrips) return memTrips; try{ memTrips=JSON.parse(localStorage.getItem(TRIP_KEY)||'[]'); }catch(e){ memTrips=[]; } return memTrips; }
+function storeTrips(){ try{ localStorage.setItem(TRIP_KEY,JSON.stringify(memTrips)); }catch(e){} }
+$('cmSave').addEventListener('click',()=>{ const s=cmSummary(); if(!s) return; loadTrips().push(s); if(memTrips.length>12) memTrips.shift(); storeTrips(); CM.saved=true; $('cmSave').disabled=true; renderCmCmp(); });
+$('cmClear').addEventListener('click',()=>{ memTrips=[]; storeTrips(); renderCmCmp(); });
+function renderCmCmp(){
+  const trips=loadTrips().slice(), cur=(!CM.on && CM.started && !CM.saved)? cmSummary() : null;
+  const rows=trips.map(t=>({t,now:false})); if(cur) rows.push({t:cur,now:true});
+  if(!rows.length){ $('cmCmp').innerHTML='<p class="cap">No trips yet.</p>'; return; }
+  const mx=Math.max(1,...rows.map(r=>r.t.aV))*1.15;
+  $('cmCmp').innerHTML=rows.map(({t,now})=>{ const b=bandOf(t.aV), d=new Date(t.at);
+    return `<div class="trip${now?' now':''}"><div class="lab">${VEH[t.veh]||t.veh} · ${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} ${d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}<span>${fmtDur(t.dur)}</span></div>
+      <div class="row"><span class="f" style="width:${Math.max(1,t.aV/mx*62)}%;background:${bandColor(b)}"></span><span>${t.aV.toFixed(2)} m/s² · ${BANDS[b].short}</span></div>
+      <div class="cap" style="margin:3px 0 0">${Math.round(t.okShare*100)} % comfortable · ${t.per10.toFixed(1)} harsh moves per 10 min</div></div>`; }).join('');
+}
+$('cmCsv').addEventListener('click',()=>{
+  const S=CM.S, L=[`time_s,vertical_ms2,push_forward_back_ms2,push_sideways_ms2,iso_total_av_ms2,comfort_band,vehicle=${CM.veh}`];
+  for(let i=0;i<S.t.length;i++) L.push([fmt(S.t[i]/1000,3),fmt(S.z[i],3),fmt(S.a[i],3),fmt(S.c[i],3),fmt(S.av[i],3),'"'+BANDS[bandOf(S.av[i])].name+'"'].join(','));
+  if(CM.events.length){ L.push(''); L.push('harsh_move,time_s,type,peak_ms2,speed_kmh'); CM.events.forEach(e=>L.push([e.n,fmt(e.t/1000,2),e.type||'',fmt(e.peak,2),fmt(e.spd,0)].join(','))); }
+  saveCSV(`comfort_${CM.veh}_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   DRIVING
+   ============================================================ */
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+function hAxes(g){
+  const gm=Math.hypot(g[0],g[1],g[2])||1, u=g.map(v=>v/gm);
+  const b=Math.abs(u[1])<0.7?[0,1,0]:[0,0,-1], bu=dot3(b,u);
+  let f=b.map((v,i)=>v-bu*u[i]); const fm=Math.hypot(f[0],f[1],f[2])||1; f=f.map(v=>v/fm);
+  return {u, f, l:[u[1]*f[2]-u[2]*f[1], u[2]*f[0]-u[0]*f[2], u[0]*f[1]-u[1]*f[0]]};
+}
+const DR={ on:false, started:false, mode:'score', target:40, runs:[], limit:50 };
+const DR_PTS={'Hard brake':3,'Hard start':2,'Sharp turn':2,'Hard brake or start':3};
+function resetDrive(){
+  Object.assign(DR,{ g:null, last:0, t0:performance.now(), sA:0, sC:0, ev:null, events:[], lastEvT:-1e9, fixes:[], lastPos:null, dist:0, speedMs:0,
+    cov:0, covN:0, accA:0, accN:0, trace:[], tEnd:null, gpsMsg:null,
+    phase:null, cal:[], g0:null, ax:null, la:0, v:0, tL:null, sign:1, peak:0, lt:[], lv:[], lg:[], buf:[], tPrev:0 });
+}
+resetDrive();
+Motion.subs.add(s=>{
+  if(!DR.on) return;
+  const a=[s.x,s.y,s.z], t=s.t-DR.t0;
+  if(DR.mode==='score'){
+    if(!DR.g){ DR.g=a.slice(); DR.last=s.t; return; }
+    const dt=Math.min(0.2,Math.max(0,(s.t-DR.last)/1000)); DR.last=s.t;
+    const tauG= t<3000 ? 0.3 : (Math.hypot(DR.sA,DR.sC)>0.8 ? 30 : 3), k=dt/(tauG+dt);
+    for(let i=0;i<3;i++) DR.g[i]+=k*(a[i]-DR.g[i]);
+    if(t<3000) return;
+    const ax=hAxes(DR.g), d=a.map((v,i)=>v-DR.g[i]), vz=dot3(d,ax.u), dh=d.map((v,i)=>v-vz*ax.u[i]);
+    const ks=dt/(0.3+dt); DR.sA+=ks*(dot3(dh,ax.f)-DR.sA); DR.sC+=ks*(dot3(dh,ax.l)-DR.sC);
+    DR.accA+=DR.sA; DR.accN++;
+    const m=Math.hypot(DR.sA,DR.sC);
+    if(!DR.ev){ if(m>HARSH && t-DR.lastEvT>1500) DR.ev={t0:t, peak:m, pa:DR.sA, pc:DR.sC}; }
+    else {
+      if(m>DR.ev.peak){ DR.ev.peak=m; DR.ev.pa=DR.sA; DR.ev.pc=DR.sC; }
+      if(m<HARSH*0.7){ if(t-DR.ev.t0>=300) commitDrive(DR.ev,t); DR.ev=null; DR.lastEvT=t; }
+    }
+    return;
+  }
+  // ---- 0–40 launch ----
+  const dt=Math.min(0.2,Math.max(0,(t-DR.tPrev)/1000)); DR.tPrev=t;
+  if(DR.phase==='cal'){
+    DR.cal.push([t,a]); while(DR.cal.length && DR.cal[0][0]<t-1500) DR.cal.shift();
+    if(t>1500){
+      const ms=DR.cal.map(([,v])=>Math.hypot(v[0],v[1],v[2])), mean=ms.reduce((p,q)=>p+q,0)/ms.length, sd=Math.sqrt(ms.reduce((p,q)=>p+(q-mean)**2,0)/ms.length);
+      if(sd<0.15){ DR.g0=[0,1,2].map(i=>DR.cal.reduce((p,[,v])=>p+v[i],0)/DR.cal.length); DR.ax=hAxes(DR.g0); DR.phase='ready'; DR.la=0; }
+    }
+    return;
+  }
+  if(DR.phase==='ready' || DR.phase==='run'){
+    const along=dot3(a.map((v,i)=>v-DR.g0[i]), DR.ax.f);
+    DR.la+=(dt/(0.08+dt))*(along-DR.la);
+    if(DR.phase==='ready'){
+      DR.buf.push([t,along]); while(DR.buf.length && DR.buf[0][0]<t-800) DR.buf.shift();
+      if(Math.abs(DR.la)>0.8){
+        DR.sign=Math.sign(DR.la);
+        let i=DR.buf.length-1; while(i>0 && DR.sign*DR.buf[i-1][1]>0.25) i--;
+        DR.tL=DR.buf[i][0]; DR.v=0;
+        for(let j=i+1;j<DR.buf.length;j++) DR.v+=DR.sign*DR.buf[j][1]*(DR.buf[j][0]-DR.buf[j-1][0])/1000;
+        DR.phase='run'; DR.lt=[0]; DR.lv=[0]; DR.peak=Math.abs(DR.la);
+      }
+      return;
+    }
+    const vPrev=DR.v; DR.v+=DR.sign*along*dt; DR.peak=Math.max(DR.peak,DR.sign*DR.la);
+    const tr=(t-DR.tL)/1000; DR.lt.push(tr); DR.lv.push(DR.v*3.6);
+    const tgt=DR.target/3.6;
+    if(DR.v>=tgt){ const f=(tgt-vPrev)/((DR.v-vPrev)||1); finishLaunch((t-dt*1000*(1-f)-DR.tL)/1000,'accelerometer'); }
+    else if(tr>60) { DR.phase='done'; $('drStatus').innerHTML='<b>No target speed within 60 s.</b> Run stopped.'; stopDrive(); }
+  }
+});
+function finishLaunch(time, src){
+  DR.phase='done';
+  DR.runs.push({n:DR.runs.length+1, target:DR.target, time, avg:(DR.target/3.6)/time, peak:DR.peak, src});
+  stopDrive();
+}
+function commitDrive(ev,tEnd){
+  const side=Math.abs(ev.pc)>Math.abs(ev.pa);
+  const before=DR.fixes.filter(f=>f.spd!=null && f.t<=ev.t0).pop();
+  let type=null;
+  if(side) type='Sharp turn';
+  else if(DR.covN>=5 && Math.abs(DR.cov)>0.5) type = Math.sign(DR.cov)*ev.pa<0 ? 'Hard brake' : 'Hard start';
+  DR.events.push({n:DR.events.length+1, t:ev.t0, tEnd, peak:ev.peak, pa:ev.pa, type, spd: before? before.spd*3.6 : null, v0: before? before.spd : null});
+}
+function classifyDrive(nowT){
+  DR.events.forEach(e=>{
+    if(e.type) return;
+    const after=DR.fixes.filter(f=>f.spd!=null && f.t>=e.tEnd+500 && f.t<=e.tEnd+4000).pop();
+    if(after && e.v0!=null && Math.abs(after.spd-e.v0)>0.3) e.type = after.spd < e.v0 ? 'Hard brake' : 'Hard start';
+    else if(nowT>e.tEnd+4000 || !DR.on) e.type='Hard brake or start';
+  });
+}
+function onDrFix(pos){
+  if(!DR.on) return;
+  const c=pos.coords, t=performance.now()-DR.t0;
+  let spd=(c.speed!=null && c.speed>=0)? c.speed : null;
+  if(c.accuracy<=35){
+    if(DR.lastPos){ const d=haversine(DR.lastPos,{lat:c.latitude,lon:c.longitude}), dt=(t-DR.lastPos.t)/1000; if(d>=3){ DR.dist+=d; if(spd==null && dt>0) spd=d/dt; } }
+    if(!DR.lastPos || haversine(DR.lastPos,{lat:c.latitude,lon:c.longitude})>=3) DR.lastPos={t,lat:c.latitude,lon:c.longitude};
+  }
+  const prev=DR.fixes.filter(f=>f.spd!=null).pop();
+  DR.fixes.push({t,spd,acc:c.accuracy}); DR.gpsMsg=null;
+  if(spd!=null){
+    DR.trace.push([t/60000, spd*3.6]);
+    if(prev){
+      const dt=(t-prev.t)/1000;
+      if(dt>0.4 && dt<3){
+        const dv=(spd-prev.spd)/dt, mA=DR.accN? DR.accA/DR.accN : 0;
+        if(Math.abs(dv)>0.3 && Math.abs(mA)>0.2){ DR.cov+=dv*mA; DR.covN++; }
+        if(spd*3.6>DR.limit+3) DR.speedMs+=dt*1000;
+      }
+    }
+    if(DR.mode==='launch' && DR.phase==='run'){ DR.lg.push([(t-DR.tL)/1000, spd*3.6]); if(spd*3.6>=DR.target && DR.v*3.6<DR.target*0.7) finishLaunch((t-DR.tL)/1000-1,'GPS'); }
+  }
+  DR.accA=0; DR.accN=0;
+  classifyDrive(t);
+}
+function drScore(){
+  const c={}; DR.events.forEach(e=>{ const k=e.type||'Hard brake or start'; c[k]=(c[k]||0)+1; });
+  const sp=Math.floor((DR.speedMs||0)/10000);
+  let lost=0; const rows=[];
+  ['Hard brake','Hard start','Sharp turn','Hard brake or start'].forEach(k=>{ if(k==='Hard brake or start' && !c[k]) return; const n=c[k]||0; lost+=n*DR_PTS[k]; rows.push([k,n,DR_PTS[k],n*DR_PTS[k]]); });
+  rows.push(['Speeding (per 10 s)',sp,1,sp]); lost+=sp;
+  return {score:clamp(100-lost,0,100), rows, lost};
+}
+document.querySelectorAll('#drive [data-dmode]').forEach(b=>b.addEventListener('click',()=>{
+  if(DR.on) return;
+  DR.mode=b.dataset.dmode;
+  document.querySelectorAll('#drive [data-dmode]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  $('drScoreBox').classList.toggle('hide',DR.mode!=='score'); $('drLaunchBox').classList.toggle('hide',DR.mode!=='launch');
+  $('drBtn').textContent = DR.mode==='score' ? 'Start drive' : 'Arm 0–'+DR.target;
+  setBand('b-dr', DR.mode==='score' ? {state:'idle',label:'Ready · drive score',num:'–',unit:'score<br>out of 100'} : {state:'idle',label:'Ready · 0–'+DR.target+' km/h',num:'–',unit:'seconds<br>0–'+DR.target+' km/h'});
+  $('drMeaning').textContent = DR.mode==='score' ? 'A passenger should run the phone. Lay it flat, top edge pointing forward, or clip it upright in a holder.' : 'Stop the vehicle somewhere safe and legal. Arm the test, keep still 2 s, then pull away. A passenger holds the phone.';
+  renderDrive(true);
+}));
+document.querySelectorAll('#drTargets button').forEach(b=>b.addEventListener('click',()=>{
+  if(DR.on) return;
+  DR.target=+b.dataset.target;
+  document.querySelectorAll('#drTargets button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  $('drBtn').textContent='Arm 0–'+DR.target; setBand('b-dr',{label:'Ready · 0–'+DR.target+' km/h',unit:'seconds<br>0–'+DR.target+' km/h'});
+  renderDrive(true);
+}));
+$('drLimit').addEventListener('input',()=>{ DR.limit=+$('drLimit').value||50; renderDrive(true); });
+$('drBtnStop').addEventListener('click',()=>{ if(DR.on){ if(DR.mode==='launch' && DR.phase!=='done') $('drStatus').textContent='Run cancelled.'; stopDrive(); } });
+$('drBtn').addEventListener('click',()=>{
+  if(DR.on) return;
+  const st=$('drStatus');
+  if(!Busy.take('drive',st)) return;
+  const perm=Motion.ask();
+  const keepRuns=DR.runs; resetDrive(); DR.runs=keepRuns; DR.on=true; DR.started=true; DR.limit=+$('drLimit').value||50;
+  if(DR.mode==='launch') DR.phase='cal';
+  if('geolocation' in navigator) DR.watch=navigator.geolocation.watchPosition(onDrFix,e=>{ DR.gpsMsg= e.code===1?'Location off: no speed or distance':'Waiting for GPS…'; },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  keepAwake(true); setGo($('drBtn'),true,$('drBtn').textContent); $('drCsv').disabled=true;
+  document.querySelectorAll('#drive .seg button').forEach(x=>x.disabled=true);
+  setBand('b-dr',{state:'rec', label: DR.mode==='score'?'Finding directions…':'Calibrating · keep still', num:'–'});
+  st.textContent='';
+  pending('b-dr',perm).then(()=>watchForData(st)).catch(e=>{ st.innerHTML='<b>'+e.message+'</b>'; stopDrive(); });
+  requestAnimationFrame(driveFrame);
+});
+function stopDrive(){ bandProgress('b-dr',null);
+  DR.on=false; DR.tEnd=performance.now()-DR.t0;
+  if(DR.watch!=null) navigator.geolocation.clearWatch(DR.watch); DR.watch=null;
+  classifyDrive(DR.tEnd);
+  keepAwake(false); Busy.free('drive'); setGo($('drBtn'),false, DR.mode==='score'?'New drive':'Arm 0–'+DR.target);
+  document.querySelectorAll('#drive .seg button').forEach(x=>x.disabled=false);
+  $('drCsv').disabled=false;
+  renderDrive(true);
+  if(DR.mode==='score' && DR.tEnd>3000) kitNote('drive',`Score ${drScore().score} · ${(DR.dist/1000).toFixed(1)} km`);
+  else if(DR.mode==='launch' && DR.runs.length){ const r=DR.runs[DR.runs.length-1]; kitNote('drive',`0–${r.target} in ${r.time.toFixed(1)} s`); }
+}
+let drLast=0;
+function driveFrame(ts){ if(DR.on) requestAnimationFrame(driveFrame); if(ts-drLast<100) return; drLast=ts; renderDrive(true); }
+function renderDrive(){
+  const now=DR.on? performance.now()-DR.t0 : (DR.tEnd||0);
+  if(DR.mode==='score'){
+    const sc=drScore(), ok=DR.started && now>3000;
+    if(DR.on) bandProgress('b-dr', now<3000 ? now/3000 : null);
+    if(DR.started) setBand('b-dr',{state: DR.on?'rec':'done', label: DR.on? (now<3000?'Finding directions…':`Recording ${fmtClock(now)}`) : `Drive · ${fmtDur(now)}`, num: ok? String(sc.score):'–', unit:'score<br>out of 100'});
+    if(ok){
+      const k = sc.score>=85 ? ['pass','Smooth driving'] : sc.score>=60 ? ['','Room to improve'] : ['fail','Harsh driving'];
+      $('drMeaning').innerHTML=`${verdictHTML(k[0],k[1])} <span style="display:block;margin-top:6px">${DR.events.length} harsh move${DR.events.length===1?'':'s'} and ${Math.round((DR.speedMs||0)/1000)} s over ${DR.limit} km/h in ${(DR.dist/1000).toFixed(1)} km.</span>`;
+    }
+    $('drKm').textContent=((DR.dist||0)/1000).toFixed(1); $('drEvN').textContent=(DR.events||[]).length; $('drSp').textContent=Math.round((DR.speedMs||0)/1000);
+    $('drPts').tBodies[0].innerHTML=sc.rows.map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="r">${r[2]}</td><td class="r">${r[3]?'−'+r[3]:'0'}</td></tr>`).join('')+`<tr><td><b>Score</b></td><td></td><td></td><td class="r"><b>${sc.score}</b></td></tr>`;
+    const tr=DR.trace||[], tmax=Math.max(1, Math.ceil(now/60000)), ymax=Math.max(DR.limit*1.3, ...tr.map(p=>p[1]*1.1), 20);
+    chart($('drSpdC'),{h:160, x:[0,tmax], y:[0,ymax], ml:40, xf:v=> v===0?'0':v<1? Math.round(v*60)+' s' : v+' min', yf:v=>v.toFixed(0),
+      hl:[{y:DR.limit,color:css('--ink'),dash:[6,4],width:2}],
+      s:[{xs:tr.map(p=>p[0]), ys:tr.map(p=>p[1]), color:css('--ink'), width:2}],
+      dots:(DR.events||[]).filter(e=>e.spd!=null).map(e=>({x:e.t/60000, y:e.spd, color:css('--alert'), ring:css('--ink'), r:6})),
+      labels:[{x:tmax, y:DR.limit, text:`limit ${DR.limit}`, align:'right', dx:-4, dy:-6}]});
+    const ev=(DR.events||[]).slice().reverse().slice(0,10);
+    $('drEvT').tBodies[0].innerHTML = ev.length ? ev.map(e=>`<tr><td>${e.n}</td><td class="r">${fmtClock(e.t)}</td><td>${e.type||'…'}</td><td class="r">${(e.peak/9.81).toFixed(2)} g</td><td class="r">${e.spd!=null?Math.round(e.spd)+' km/h':'–'}</td></tr>`).join('') : '<tr><td colspan="5" class="cap">None yet.</td></tr>';
+    if(DR.on && now>3000){ const f=(DR.fixes||[]).slice(-1)[0]; $('drStatus').innerHTML=`${Math.round(Motion.rate)||'–'} readings/s · ${DR.gpsMsg || (f&&f.spd!=null? Math.round(f.spd*3.6)+' km/h' : 'Waiting for GPS…')}`; }
+  } else {
+    const last=DR.runs[DR.runs.length-1];
+    if(DR.on){
+      const lab={cal:'Calibrating · keep still', ready:'Ready · pull away when safe', run:'Timing…'}[DR.phase]||'';
+      bandProgress('b-dr', DR.phase==='cal' ? clamp(now/1500,0,1) : DR.phase==='run' ? clamp(DR.v*3.6/DR.target,0,1) : null);
+      const num= DR.phase==='run' ? ((DR.lt[DR.lt.length-1]||0)).toFixed(1) : '–';
+      setBand('b-dr',{state:'rec',label:lab,num,unit:'seconds<br>0–'+DR.target+' km/h'});
+      if(DR.phase==='run') $('drMeaning').textContent=`${Math.round(DR.v*3.6)} km/h…`;
+      else if(DR.phase==='ready') $('drMeaning').textContent='Calibrated. The clock starts on the first push.';
+    } else if(last){
+      setBand('b-dr',{state:'done',label:`Run ${last.n} · 0–${last.target} km/h`,num:last.time.toFixed(1),unit:'seconds<br>0–'+last.target+' km/h'});
+      $('drMeaning').innerHTML=`${verdictHTML('', `0–${last.target} in ${last.time.toFixed(1)} s`)} <span style="display:block;margin-top:6px">Average ${last.avg.toFixed(2)} m/s² (${(last.avg/9.81).toFixed(2)} g), peak ${last.peak.toFixed(2)} m/s². Timed by the ${last.src}.</span>`;
+    }
+    if(last){ $('drTime').textContent=last.time.toFixed(1); $('drAvg').textContent=last.avg.toFixed(2); $('drPk').textContent=last.peak.toFixed(2); }
+    const tmax=Math.max(6, Math.ceil((DR.lt||[]).slice(-1)[0]||0)+1);
+    chart($('drRunC'),{h:160, x:[0,tmax], y:[0,DR.target*1.25], ml:40, xf:v=>v+' s', yf:v=>v.toFixed(0),
+      hl:[{y:DR.target,color:css('--ink'),dash:[6,4],width:2}],
+      s:[{xs:DR.lt||[], ys:DR.lv||[], color:css('--ink'), width:2.5}],
+      dots:(DR.lg||[]).map(([x,y])=>({x,y,color:css('--hv'),ring:css('--ink'),r:5})),
+      labels:[{x:tmax,y:DR.target,text:`target ${DR.target} km/h`,align:'right',dx:-4,dy:-6}]});
+    $('drRunT').tBodies[0].innerHTML = DR.runs.length ? DR.runs.slice().reverse().map(r=>`<tr><td>${r.n}</td><td>0–${r.target}</td><td class="r">${r.time.toFixed(1)} s</td><td class="r">${r.avg.toFixed(2)} m/s²</td><td class="r">${r.peak.toFixed(2)} m/s²</td></tr>`).join('') : '<tr><td colspan="5" class="cap">No runs yet.</td></tr>';
+  }
+}
+$('drCsv').addEventListener('click',()=>{
+  const L=[];
+  if(DR.mode==='score'){
+    const sc=drScore(); L.push(`summary,score=${sc.score},km=${fmt(DR.dist/1000,2)},speeding_s=${Math.round(DR.speedMs/1000)},limit_kmh=${DR.limit}`);
+    L.push('time_min,gps_speed_kmh'); (DR.trace||[]).forEach(p=>L.push(`${fmt(p[0],3)},${fmt(p[1],1)}`));
+    L.push(''); L.push('harsh_move,time_s,type,peak_ms2,speed_kmh'); DR.events.forEach(e=>L.push([e.n,fmt(e.t/1000,2),e.type||'',fmt(e.peak,2),fmt(e.spd,0)].join(',')));
+  } else {
+    L.push('run,target_kmh,time_s,avg_accel_ms2,peak_accel_ms2,timed_by'); DR.runs.forEach(r=>L.push([r.n,r.target,fmt(r.time,2),fmt(r.avg,3),fmt(r.peak,3),r.src].join(',')));
+    L.push(''); L.push('t_s,speed_accel_kmh'); (DR.lt||[]).forEach((t,i)=>L.push(`${fmt(t,3)},${fmt(DR.lv[i],2)}`));
+  }
+  saveCSV(`driving_${DR.mode}_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   NOISE EXPOSURE
+   ============================================================ */
+const NZ_STD={ niosh:{name:'NIOSH', Lc:85, ER:3}, india:{name:'India / OSHA', Lc:90, ER:5} };
+const NZ_BASE=115;     // typical phone mic: dB SPL at 0 dBFS (estimate, see calibration)
+const NZ={ on:false, started:false, std:'niosh', cal:0, hist:[], lf:null, max:null, secE:0, secT:0, wA:null, win:null, mw2:1 };
+function nzAllowedH(L,std){ const s=NZ_STD[std]; return 8/Math.pow(2,(L-s.Lc)/s.ER); }
+function aWeight(f){ const f2=f*f, n=12194**2*f2*f2, d=(f2+20.6**2)*Math.sqrt((f2+107.7**2)*(f2+737.9**2))*(f2+12194**2); return (n/d)*1.2589; }
+function nzPrep(N,sr){
+  NZ.wA=new Float64Array(N/2); for(let k=1;k<N/2;k++){ const a=aWeight(k*sr/N); NZ.wA[k]=a*a; }
+  NZ.win=new Float64Array(N); let s2=0; for(let n=0;n<N;n++){ NZ.win[n]=0.5-0.5*Math.cos(2*Math.PI*n/(N-1)); s2+=NZ.win[n]**2; } NZ.mw2=s2/N; NZ.N=N; NZ.sr=sr;
+}
+// one block of mic samples → A-weighted level (dB, before calibration offset)
+function nzBlock(x){
+  const N=x.length; if(!NZ.wA || NZ.N!==N) nzPrep(N,NZ.sr||48000);
+  const re=new Float64Array(N), im=new Float64Array(N); let pk=0;
+  for(let n=0;n<N;n++){ re[n]=x[n]*NZ.win[n]; pk=Math.max(pk,Math.abs(x[n])); }
+  fft(re,im);
+  let e=0; for(let k=1;k<N/2;k++) e+=2*(re[k]*re[k]+im[k]*im[k])*NZ.wA[k];
+  e/=N*N*NZ.mw2;
+  const L=10*Math.log10(e+1e-20)+NZ_BASE, dt=N/NZ.sr, E=Math.pow(10,L/10);
+  NZ.lf = NZ.lf==null ? E : NZ.lf+(1-Math.exp(-dt/0.125))*(E-NZ.lf);
+  NZ.max = NZ.max==null ? L : Math.max(NZ.max, L);
+  NZ.secE+=E*dt; NZ.secT+=dt;
+  if(NZ.secT>=1){ NZ.hist.push(10*Math.log10(NZ.secE/NZ.secT)); NZ.secE=0; NZ.secT=0; }
+  return L;
+}
+function nzStats(){
+  const h=NZ.hist, c=NZ.cal, n=h.length;
+  if(!n) return null;
+  let E=0, dose={niosh:0,india:0};
+  for(const L0 of h){ const L=L0+c; E+=Math.pow(10,L/10); if(L>=70){ dose.niosh+=(1/3600)/nzAllowedH(L,'niosh'); dose.india+=(1/3600)/nzAllowedH(L,'india'); } }
+  const leq=10*Math.log10(E/n), hrs=n/3600;
+  return {leq, dose:dose[NZ.std], proj:dose[NZ.std]*8/hrs, hrs, safeH:nzAllowedH(leq,NZ.std)};
+}
+function fmtHours(h){ if(!isFinite(h)) return '–'; if(h>=24) return 'over 24 h'; const m=Math.round(h*60); return m>=60 ? `${Math.floor(m/60)} h${m%60?' '+(m%60)+' min':''}` : m>=1 ? `${m} min` : `${Math.max(1,Math.round(h*3600))} s`; }
+document.querySelectorAll('#noise [data-std]').forEach(b=>b.addEventListener('click',()=>{
+  NZ.std=b.dataset.std;
+  document.querySelectorAll('#noise [data-std]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  renderNoise();
+}));
+$('nzBtnStop').addEventListener('click',()=>{ if(NZ.on) stopNoise(); });
+$('nzBtn').addEventListener('click',()=>{
+  if(NZ.on) return;
+  if(!Busy.take('noise',$('nzStatus'))) return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('nzStatus').innerHTML='<b>This browser has no microphone access.</b>'; Busy.free('noise'); return; }
+  NZ.ctx=new AC(); NZ.ctx.resume();
+  pending('b-nz',navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})).then(stream=>{
+    NZ.stream=stream; NZ.sr=NZ.ctx.sampleRate; nzPrep(4096,NZ.sr);
+    Object.assign(NZ,{hist:[], lf:null, max:null, secE:0, secT:0, started:true, on:true, t0:performance.now()});
+    const src=NZ.ctx.createMediaStreamSource(stream);
+    NZ.proc=NZ.ctx.createScriptProcessor(4096,1,1);
+    NZ.proc.onaudioprocess=e=>{ nzBlock(e.inputBuffer.getChannelData(0)); for(let i=0;i<e.outputBuffer.numberOfChannels;i++) e.outputBuffer.getChannelData(i).fill(0); };
+    src.connect(NZ.proc); NZ.proc.connect(NZ.ctx.destination);
+    keepAwake(true); setGo($('nzBtn'),true,'Listen'); $('nzCsv').disabled=true; $('nzMatch').disabled=false;
+    $('nzStatus').textContent=`Microphone at ${Math.round(NZ.sr)} samples/s, A-weighted.`;
+    noiseFrame();
+  }).catch(()=>{ $('nzStatus').innerHTML='<b>Microphone not allowed.</b> Allow it in Safari, or close the tab and open the page again.'; Busy.free('noise'); try{ NZ.ctx.close(); }catch(_){} });
+});
+function stopNoise(){ bandProgress('b-nz',null);
+  NZ.on=false; Busy.free('noise'); keepAwake(false); setGo($('nzBtn'),false,'Listen');
+  try{ NZ.proc.disconnect(); NZ.stream.getTracks().forEach(t=>t.stop()); NZ.ctx.close(); }catch(e){}
+  $('nzCsv').disabled=!NZ.hist.length; $('nzMatch').disabled=true;
+  { const st=nzStats(); if(st) kitNote('noise',`${st.leq.toFixed(1)} dB(A) · ${Math.round(st.proj*100)} % of daily dose`); }
+  renderNoise();
+}
+$('nzMatch').addEventListener('click',()=>{
+  const ref=+$('nzRef').value, h=NZ.hist.slice(-5);
+  if(!ref || !h.length){ $('nzCalCap').textContent='Type the meter reading first, with the app listening for a few seconds.'; return; }
+  const leq0=10*Math.log10(h.reduce((p,L)=>p+Math.pow(10,L/10),0)/h.length);
+  NZ.cal=ref-leq0; renderNoise();
+});
+function noiseFrame(){ if(!NZ.on){ bandProgress('b-nz',null); return; } bandProgress('b-nz', NZ.hist.length ? null : clamp(NZ.secT,0,1)); renderNoise(); setTimeout(()=>requestAnimationFrame(noiseFrame),150); }
+function renderNoise(){
+  const std=NZ_STD[NZ.std], st=nzStats();
+  if(!NZ.on && NZ.started && !st) setBand('b-nz',{state:'idle',label:'Ready'});
+  $('nzStdCap').textContent=`${std.name}: ${std.Lc} dB(A) for 8 hours. Every ${std.ER} dB louder halves the safe time.`;
+  $('nzCalCap').textContent = NZ.cal ? `Offset ${NZ.cal>=0?'+':''}${NZ.cal.toFixed(1)} dB (matched to your meter).` : 'Offset 0.0 dB (not calibrated: estimates).';
+  const rows=[-1,0,1,2,3,4,5].map(i=>std.Lc+i*std.ER);
+  $('nzTable').tBodies[0].innerHTML=rows.map((L,i)=>{ const here= st && st.leq>=L && (i===rows.length-1 || st.leq<rows[i+1]) || (st && i===0 && st.leq<L);
+    return `<tr class="${here?'here':''}"><td>${L} dB(A)${here?' · you':''}</td><td class="r">${fmtHours(nzAllowedH(L,NZ.std))}</td></tr>`; }).join('');
+  if(NZ.started && NZ.lf!=null){
+    const live=10*Math.log10(NZ.lf)+NZ.cal;
+    if(NZ.on) setBand('b-nz',{state: live>std.Lc?'alert':'rec', label:`Live · ${std.name}${NZ.cal?'':' · estimate'}`, num: live.toFixed(0), unit:'dB(A)<br>live'});
+    else if(st) setBand('b-nz',{state: st.proj>=1?'alert':'done', label:`Stopped · ${fmtHours(st.hrs)} measured`, num: st.leq.toFixed(0), unit:'dB(A)<br>average Leq'});
+  }
+  if(st){
+    $('nzLeq').textContent=st.leq.toFixed(1); $('nzMax').textContent=(NZ.max+NZ.cal).toFixed(0); $('nzDose').textContent=(st.dose*100<10?(st.dose*100).toFixed(2):(st.dose*100).toFixed(0));
+    $('nzBar').style.width=clamp(st.proj*50,0,100)+'%'; $('nzBar').style.background= st.proj>=1 ? css('--alert') : css('--ink');
+    $('nzProj').innerHTML=`At ${st.leq.toFixed(1)} dB(A) the daily dose would reach <b>${Math.round(st.proj*100)} %</b> over 8 h. Safe time at this level: <b>${fmtHours(st.safeH)}</b>.`;
+    const k = st.proj<0.5 ? ['pass','Safe for a full shift'] : st.proj<1 ? ['','Near the daily limit'] : ['fail','Over the daily limit'];
+    $('nzMeaning').innerHTML=`${verdictHTML(k[0],k[1])} <span style="display:block;margin-top:6px">${st.proj<0.5?'Well under the '+std.name+' limit.':st.proj<1?'Limit time here, or take quiet breaks.':'Wear hearing protection, or cut time here to '+fmtHours(st.safeH)+' a day.'}</span>`;
+  }
+  const h=NZ.hist, n=h.length, n0=Math.max(0,n-600), xs=[], ys=[];
+  for(let i=n0;i<n;i++){ xs.push((i-n+1)/60); ys.push(h[i]+NZ.cal); }
+  chart($('nzC'),{h:170, x:[-10,0], y:[30,120], ml:40, xf:v=>v===0?'now':v+' min', yf:v=>v.toFixed(0), yt:[40,60,80,100,120],
+    ybands:[{y0:std.Lc,y1:130,fill:css('--over')}],
+    hl:[{y:std.Lc,color:css('--alert'),dash:[6,4],width:2}],
+    s:[{xs,ys,color:css('--ink'),width:1.8}],
+    labels:[{x:0,y:std.Lc,text:`${std.Lc} dB(A) limit`,align:'right',dx:-4,dy:-6}]});
+}
+$('nzCsv').addEventListener('click',()=>{
+  const st=nzStats(), L=[`summary,standard=${NZ_STD[NZ.std].name},calibration_offset_db=${fmt(NZ.cal,1)},leq_dba=${fmt(st&&st.leq,1)},dose_pct=${fmt(st&&st.dose*100,2)},projected_8h_pct=${fmt(st&&st.proj*100,1)}`,'second,level_dba'];
+  NZ.hist.forEach((v,i)=>L.push(`${i+1},${fmt(v+NZ.cal,1)}`));
+  saveCSV(`noise_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   OPERATOR
+   ============================================================ */
+const T = { state:'idle', buf:null, res:null };
+const TREM_SECS=10, COUNT_SECS=3;
+Motion.subs.add(s=>{ if(T.state!=='rec') return; T.buf.t.push(s.t); T.buf.x.push(s.x); T.buf.y.push(s.y); T.buf.z.push(s.z); });
+$('tremBtn').addEventListener('click',()=>{
+  if(T.state!=='idle') return;
+  if(!Busy.take('op',$('tremStatus'))) return;
+  const perm=Motion.ask();
+  T.state='count'; $('tremBtn').disabled=true; opStopState(); $('tremStatus').textContent=''; keepAwake(true);
+  setBand('b-op',{state:'rec',label:'Hold still',num:'–',unit:'m/s²<br>3–20 Hz'});
+  pending('b-op',perm).then(()=>{
+    watchForData($('tremStatus'));
+    const t0=performance.now();
+    const tick=()=>{
+      const el=(performance.now()-t0)/1000;
+      if(T.state==='idle') return;
+      if(T.state==='count'){
+        const left=Math.ceil(COUNT_SECS-el);
+        $('tremCount').textContent= left>0 ? 'Get ready · '+left : 'Recording';
+        bandProgress('b-op', 'indef');
+        if(el>=COUNT_SECS){ T.state='rec'; T.buf={t:[],x:[],y:[],z:[]}; T.recStart=performance.now(); }
+      } else if(T.state==='rec'){
+        const r=(performance.now()-T.recStart)/1000;
+        $('tremCount').textContent=(TREM_SECS-r).toFixed(1)+' s left';
+        setBand('b-op',{label:'Recording · '+Math.max(0,TREM_SECS-r).toFixed(0)+' s'});
+        $('tremProg').style.width=Math.min(100,r/TREM_SECS*100)+'%'; bandProgress('b-op', r/TREM_SECS);
+        if(r>=TREM_SECS){ finishTremor(); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }).catch(e=>{ T.state='idle'; Busy.free('op'); keepAwake(false); $('tremBtn').disabled=false; setBand('b-op',{state:'idle',label:'Tremor size'}); $('tremStatus').innerHTML='<b>'+e.message+'</b>'; });
+});
+function finishTremor(){
+  T.state='idle'; opStopState(); bandProgress('b-op',null); Busy.free('op'); keepAwake(false);
+  $('tremBtn').disabled=false; $('tremBtn').textContent='Run the tremor test again';
+  $('tremCount').textContent=''; $('tremProg').style.width='0';
+  const res=analyzeTremor(T.buf);
+  if(!res){ setBand('b-op',{state:'alert',label:'No data'}); $('tremStatus').innerHTML='<b>Too few readings.</b> Check motion access and try again.'; return; }
+  T.res=res; T.res.at=new Date().toISOString();
+  $('tremStatus').textContent=`${res.N} readings over ${res.dur.toFixed(1)} s.`;
+  kitNote('op',`Tremor ${res.rms.toFixed(3)} m/s² · ${res.peakHz.toFixed(1)} Hz`);
+  renderTremor(); renderCompare();
+}
+function renderTremor(){
+  const r=T.res; if(!r) return;
+  setBand('b-op',{state:'done',label:'Tremor size',num:r.rms.toFixed(3),unit:'m/s²<br>3–20 Hz'});
+  $('tremOut').classList.remove('hide');
+  $('tRms').textContent=r.rms.toFixed(3); $('tPk').textContent=r.peakHz.toFixed(1); $('tFs').textContent=Math.round(r.fs);
+  const lim=Math.max(0.05, ...r.trace.y.map(Math.abs))*1.1;
+  chart($('tremTraceC'),{h:160, x:[0,TREM_SECS], y:[-lim,lim], ml:46, xf:v=>v+' s', yf:v=>v.toFixed(2), s:[{xs:r.trace.t, ys:r.trace.y, color:css('--ink'), width:1.5}]});
+  const fmax=r.freqs[r.freqs.length-1]||25, top=Math.max(...r.amp)*1.2||0.01;
+  chart($('tremSpecC'),{h:180, x:[0,fmax], y:[0,top], ml:46, xf:v=>v+'', yf:v=>v.toFixed(top<0.1?3:2),
+    bands:[{x0:8,x1:Math.min(12,fmax),fill:css('--zone'),label:'8–12 Hz'}],
+    s:[{xs:r.freqs, ys:r.amp, color:css('--ink'), width:2}],
+    dots:[{x:r.peakHz, y:r.peakAmp, color:css('--alert'), ring:css('--ink'), r:6}],
+    labels:[{x:r.peakHz, y:r.peakAmp, text:`peak ${r.peakHz.toFixed(1)} Hz`, dx:9, dy:-4}]});
+}
+const RT={ state:'idle', trials:[], timer:null, t0:0, tGo:0, N:5 };
+function opStopState(){ $('opStop').disabled = !(T.state==='count'||T.state==='rec'||['wait','go','early','between'].includes(RT.state)); }
+$('opStop').addEventListener('click',()=>{
+  if(T.state==='count'||T.state==='rec'){
+    T.state='idle'; Busy.free('op'); keepAwake(false); $('tremBtn').disabled=false; $('tremCount').textContent=''; $('tremProg').style.width='0';
+    bandProgress('b-op',null); setBand('b-op',{state:T.res?'done':'idle',label:'Tremor size',num:T.res?T.res.rms.toFixed(3):'–'}); $('tremStatus').textContent='Tremor test stopped.';
+  }
+  if(['wait','go','early','between'].includes(RT.state)){ clearTimeout(RT.timer); RT.state='idle'; RT.trials=[]; padSet('','Tap to start'); $('rtStatus').textContent='Reaction test stopped.'; }
+  opStopState();
+});
+const pad=$('pad');
+function padSet(cls,text){ pad.className='pad '+(cls||''); pad.textContent=text; }
+function rtNext(){
+  RT.state='wait'; padSet('wait','Wait for green…'); opStopState();
+  clearTimeout(RT.timer);
+  RT.timer=setTimeout(()=>{
+    RT.state='go'; RT.t0=0; padSet('go','Tap!'); RT.tGo=performance.now();
+    requestAnimationFrame(()=>requestAnimationFrame(ts=>{ if(!RT.t0) RT.t0=ts; }));
+  }, 1500+Math.random()*2500);
+}
+pad.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  let ts=e.timeStamp; if(!ts || ts>1e11) ts=performance.now();
+  switch(RT.state){
+    case 'idle': case 'done':
+      if(Busy.who && Busy.who!=='op'){ Busy.take('op',$('rtStatus')); return; }
+      RT.trials=[]; $('rtStatus').textContent='Try 1 of '+RT.N; rtNext(); break;
+    case 'wait':
+      clearTimeout(RT.timer); RT.state='early'; padSet('early','Too soon!\nTap to redo this try'); break;
+    case 'early': case 'between':
+      $('rtStatus').textContent='Try '+(RT.trials.length+1)+' of '+RT.N; rtNext(); break;
+    case 'go': {
+      const rt=ts-(RT.t0||RT.tGo);
+      if(rt<100){ RT.state='early'; padSet('early','That was a guess\nTap to redo'); break; }
+      RT.trials.push(rt); renderRT();
+      setBand('b-op',{state:'done',label:`Reaction · try ${RT.trials.length}`,num:Math.round(rt),unit:'ms'});
+      if(RT.trials.length<RT.N){ RT.state='between'; padSet('',Math.round(rt)+' ms\nTap for the next try'); }
+      else { RT.state='done'; RT.at=new Date().toISOString(); const md=Math.round(median(RT.trials)); padSet('',`Median ${md} ms\nTap to test again`); setBand('b-op',{label:'Reaction · median',num:md,unit:'ms'}); $('rtStatus').textContent='Done.'; kitNote('op',`Reaction ${md} ms${T.res?' · tremor '+T.res.rms.toFixed(3)+' m/s²':''}`); renderCompare(); opStopState(); }
+      break; }
+  }
+});
+pad.addEventListener('contextmenu',e=>e.preventDefault());
+function renderRT(){
+  const t=RT.trials; if(!t.length) return;
+  $('rtOut').classList.remove('hide');
+  const med=median(t);
+  $('rMed').textContent=Math.round(med); $('rBest').textContent=Math.round(Math.min(...t)); $('rSpread').textContent=Math.round(Math.max(...t)-Math.min(...t));
+  const base=getBase(), xmax=Math.max(500, ...t, base&&base.rtMedian||0)*1.1;
+  const vl=[{x:med,color:css('--ink'),width:2.5}]; if(base && base.rtMedian) vl.push({x:base.rtMedian,color:css('--muted'),width:2,dash:[5,4]});
+  chart($('rtC'),{h:110, x:[0,xmax], y:[0,1], yt:[], ml:12, xf:v=>v+' ms',
+    vl, dots:t.map((v,i)=>({x:v, y:0.25+0.5*((i%3)/2), color:css('--hv'), ring:css('--ink'), r:7})),
+    labels:[{x:med, y:1, text:'median '+Math.round(med), dx:6, dy:8}]});
+}
+const BASE_KEY='fieldkit.baseline.v1';
+let memBase=null;
+function loadBase(){ try{ return JSON.parse(localStorage.getItem(BASE_KEY)||'null'); }catch(e){ return null; } }
+function storeBase(b){ try{ b? localStorage.setItem(BASE_KEY,JSON.stringify(b)) : localStorage.removeItem(BASE_KEY); }catch(e){} }
+function getBase(){ return memBase || loadBase(); }
+function current(){ return { tremorRms:T.res?T.res.rms:null, tremorPeak:T.res?T.res.peakHz:null, rtMedian:RT.state==='done'&&RT.trials.length?median(RT.trials):null, at:new Date().toISOString() }; }
+$('saveBase').addEventListener('click',()=>{ const c=current(); memBase=c; storeBase(c); renderCompare(); renderRT(); });
+$('clearBase').addEventListener('click',()=>{ memBase=null; storeBase(null); renderCompare(); renderRT(); });
+$('opCsv').addEventListener('click',()=>{
+  const L=['section,key,value'], c=current(), b=getBase();
+  ['tremorRms','tremorPeak','rtMedian'].forEach(k=>{ L.push(`now,${k},${fmt(c[k],4)}`); if(b) L.push(`baseline,${k},${fmt(b[k],4)}`); });
+  RT.trials.forEach((v,i)=>L.push(`reaction_try,${i+1},${fmt(v,1)}`));
+  if(T.res && T.buf){ L.push('tremor_sample_header,t_s,x;y;z (m/s²)'); T.buf.t.forEach((t,i)=>L.push(`tremor_sample,${fmt((t-T.buf.t[0])/1000,3)},${fmt(T.buf.x[i],4)};${fmt(T.buf.y[i],4)};${fmt(T.buf.z[i],4)}`)); }
+  saveCSV(`operator_${stamp()}.csv`, L.join('\n'));
+});
+function pairRow(label,unit,bv,nv,dec){
+  if(nv==null && bv==null) return '';
+  const mx=Math.max(bv||0,nv||0)*1.15||1;
+  let delta=''; if(bv!=null && nv!=null){ const p=(nv-bv)/bv*100; delta=`${p>=0?'+':''}${Math.round(p)}% vs baseline`; }
+  const bar=(lab,v,cls)=> v==null? '' : `<div class="bar"><span class="t">${lab}</span><span class="track"><span class="f ${cls}" style="width:${Math.max(1,v/mx*72)}%"></span><span>${v.toFixed(dec)} ${unit}</span></span></div>`;
+  return `<div class="pair"><div class="lab">${label}<span>${delta}</span></div>${bar('Baseline',bv,'base')}${bar('Now',nv,'now')}</div>`;
+}
+function renderCompare(){
+  const c=current(), b=getBase(), have=c.tremorRms!=null || c.rtMedian!=null;
+  $('saveBase').disabled=!have; $('opCsv').disabled=!have; $('clearBase').disabled=!b;
+  if(!have && !b){ $('cmp').innerHTML='<p class="cap">Do both tests, then save them as your baseline.</p>'; return; }
+  let html = b ? `<p class="cap">Baseline saved ${new Date(b.at).toLocaleString()}. Both bars share one scale.</p>` : '<p class="cap">No baseline yet. If you are rested now, tap <b>Save as baseline</b>.</p>';
+  html+=pairRow('Tremor size','m/s²', b&&b.tremorRms, c.tremorRms, 3);
+  html+=pairRow('Reaction time (median)','ms', b&&b.rtMedian, c.rtMedian, 0);
+  let verdict=null;
+  if(b){
+    const flags=[];
+    if(b.tremorRms && c.tremorRms){ const r=c.tremorRms/b.tremorRms; if(r>=1.5) flags.push(`hands shake ${r.toFixed(1)}× as much`); }
+    if(b.rtMedian && c.rtMedian){ const d=c.rtMedian-b.rtMedian; if(d>=40) flags.push(`reactions are ${Math.round(d)} ms slower`); }
+    if((b.tremorRms&&c.tremorRms)||(b.rtMedian&&c.rtMedian)){
+      verdict = flags.length ? {k:'fail', t:'Take a break', s:`Compared with your baseline, your ${flags.join(' and your ')}.`} : {k:'pass', t:'Close to baseline', s:'No sign of extra shake or slower reactions.'};
+      html+=`<div class="callout">${verdictHTML(verdict.k,verdict.t)}<div style="margin-top:6px">${verdict.s}</div></div>`;
+    }
+  }
+  $('cmp').innerHTML=html;
+  $('opMeaning').innerHTML = verdict ? `${verdictHTML(verdict.k,verdict.t)} <span style="display:block;margin-top:6px">${verdict.s}</span>` : 'Test while rested and save it as a baseline. Test again after a shift, after lifting, or when tired.';
+}
+
+/* ============================================================
+   ROOM ACOUSTICS
+   ============================================================ */
+const RM_BANDS=[250,500,1000,2000,4000];
+const RM_LIM={small:{t:0.6,name:'Classroom up to 283 m³'}, large:{t:0.7,name:'Large classroom up to 566 m³'}, none:{t:null,name:'No limit set'}};
+const RM={ on:false, room:'small', ctx:null, stream:null, proc:null, ring:null, w:0, total:0, sr:48000, noise:0.002, capture:null, lastCap:-1e9, lvl:0, claps:[], n:0 };
+function bandpass(x, f0, sr){
+  const w0=2*Math.PI*f0/sr, al=Math.sin(w0)*Math.sinh(Math.LN2/2*1*w0/Math.sin(w0));
+  const b0=al/(1+al), b2=-al/(1+al), a1=-2*Math.cos(w0)/(1+al), a2=(1-al)/(1+al);
+  let y=Float64Array.from(x);
+  for(let pass=0;pass<2;pass++){
+    const out=new Float64Array(y.length); let x1=0,x2=0,y1=0,y2=0;
+    for(let n=0;n<y.length;n++){ const v=b0*y[n]+b2*x2-a1*y1-a2*y2; x2=x1; x1=y[n]; y2=y1; y1=v; out[n]=v; }
+    y=out;
+  }
+  return y;
+}
+// Schroeder decay of one band → {edc:{t,db}, t20, edt, range, c50}
+function decayBand(h, sr, onset){
+  const n=h.length-onset; if(n<sr*0.3) return null;
+  const e=new Float64Array(n); for(let i=0;i<n;i++) e[i]=h[onset+i]*h[onset+i];
+  const tail=Math.floor(n*0.15); let nE=0; for(let i=n-tail;i<n;i++) nE+=e[i]; nE/=tail;
+  // 10 ms envelope to find where the decay meets the noise
+  const W=Math.round(sr*0.01), env=[]; for(let i=0;i+W<=n;i+=W){ let s=0; for(let j=i;j<i+W;j++) s+=e[j]; env.push(s/W); }
+  let pk=0; for(let i=0;i<env.length;i++) if(env[i]>env[pk]) pk=i;
+  const range=10*Math.log10(env[pk]/(nE||1e-20));
+  let cut=env.length-1; for(let i=pk;i<env.length;i++){ if(env[i]<nE*Math.pow(10,0.5)){ cut=i; break; } }
+  const iEnd=Math.min(n,(cut+1)*W), start=pk*W;
+  const cum=new Float64Array(iEnd-start+1);
+  for(let i=iEnd-1;i>=start;i--) cum[i-start]=cum[i-start+1]+Math.max(0,e[i]-nE);
+  const tot=cum[0]||1e-20, edc={t:[],db:[]}, step=Math.max(1,Math.round(sr*0.002));
+  for(let i=0;i<cum.length-1;i+=step){ edc.t.push(i/sr); edc.db.push(10*Math.log10(Math.max(cum[i]/tot,1e-12))); }
+  const fitBetween=(hi,lo)=>{ const xs=[],ys=[]; for(let i=0;i<edc.t.length;i++){ if(edc.db[i]<=hi && edc.db[i]>=lo){ xs.push(edc.t[i]); ys.push(edc.db[i]); } if(edc.db[i]<lo) break; }
+    if(xs.length<5) return null; const L=linfit(xs,ys); return L.b<0 ? {rt:-60/L.b, a:L.a, b:L.b, t0:xs[0], t1:xs[xs.length-1]} : null; };
+  const reach=edc.db[edc.db.length-1];
+  const t20 = reach<=-25 ? fitBetween(-5,-25) : null, edt=fitBetween(0,-10);
+  const i50=Math.min(cum.length-1,Math.round(0.05*sr)), c50=10*Math.log10(Math.max(tot-cum[i50],1e-20)/Math.max(cum[i50],1e-20));
+  return {edc, t20, edt, range, c50};
+}
+function analyzeClap(x, sr){
+  let mx=0, onset=0; for(let i=0;i<x.length;i++) mx=Math.max(mx,Math.abs(x[i]));
+  if(mx<1e-3) return null;
+  for(let i=0;i<x.length;i++) if(Math.abs(x[i])>0.5*mx){ onset=i; break; }
+  const bands={};
+  RM_BANDS.forEach(f=>{ const h=bandpass(x,f,sr); const d=decayBand(h,sr,Math.max(0,onset-Math.round(0.002*sr))); bands[f]=d; });
+  const b5=bands[500], b1=bands[1000];
+  const rts=[b5&&b5.t20&&b5.t20.rt, b1&&b1.t20&&b1.t20.rt].filter(v=>v);
+  if(!rts.length) return null;
+  const edts=[b5&&b5.edt&&b5.edt.rt, b1&&b1.edt&&b1.edt.rt].filter(v=>v);
+  return { bands, rtMid: rts.reduce((a,b)=>a+b,0)/rts.length, edt: edts.length? edts.reduce((a,b)=>a+b,0)/edts.length : null,
+           c50: b1? b1.c50 : null, range: Math.min(...[b5,b1].filter(Boolean).map(b=>b.range)) };
+}
+document.querySelectorAll('#room [data-room]').forEach(b=>b.addEventListener('click',()=>{
+  RM.room=b.dataset.room;
+  document.querySelectorAll('#room [data-room]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  renderRoom();
+}));
+['rmL','rmW','rmH'].forEach(id=>$(id).addEventListener('input',()=>renderRoom()));
+$('rmBtnStop').addEventListener('click',()=>{ if(RM.on) stopRoom(); });
+$('rmBtn').addEventListener('click',()=>{
+  if(RM.on) return;
+  if(!Busy.take('room',$('rmStatus'))) return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('rmStatus').innerHTML='<b>This browser has no microphone access.</b>'; Busy.free('room'); return; }
+  RM.ctx=new AC(); RM.ctx.resume();
+  pending('b-rm',navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})).then(stream=>{
+    RM.stream=stream; RM.sr=RM.ctx.sampleRate;
+    const src=RM.ctx.createMediaStreamSource(stream);
+    RM.proc=RM.ctx.createScriptProcessor(2048,1,1);
+    RM.ring=new Float32Array(Math.round(RM.sr*4)); RM.w=0; RM.total=0; RM.capture=null; RM.lastCap=-1e9;
+    RM.proc.onaudioprocess=onRoomAudio;
+    src.connect(RM.proc); RM.proc.connect(RM.ctx.destination);
+    RM.on=true; keepAwake(true); setGo($('rmBtn'),true,'Listen');
+    setBand('b-rm',{state:'rec',label:'Listening · clap once'});
+    $('rmStatus').textContent=`Microphone at ${Math.round(RM.sr)} samples/s. Keep the room quiet between claps.`;
+    roomFrame();
+  }).catch(()=>{ $('rmStatus').innerHTML='<b>Microphone not allowed.</b> Allow it in Safari, or close the tab and open the page again.'; Busy.free('room'); try{ RM.ctx.close(); }catch(_){} });
+});
+function stopRoom(){ bandProgress('b-rm',null);
+  RM.on=false; Busy.free('room'); keepAwake(false); setGo($('rmBtn'),false,'Listen');
+  try{ RM.proc.disconnect(); RM.stream.getTracks().forEach(t=>t.stop()); RM.ctx.close(); }catch(e){}
+  renderRoom();
+}
+function onRoomAudio(e){
+  const x=e.inputBuffer.getChannelData(0), N=RM.ring.length;
+  let s2=0; for(let i=0;i<x.length;i++){ RM.ring[RM.w]=x[i]; RM.w=(RM.w+1)%N; s2+=x[i]*x[i]; }
+  RM.total+=x.length;
+  const rms=Math.sqrt(s2/x.length); RM.lvl=rms;
+  const trig=Math.max(RM.noise*12, 0.02);
+  if(!RM.capture){
+    if(rms>trig && RM.total-RM.lastCap>RM.sr*3) RM.capture={need:RM.total+Math.round(RM.sr*2.5), pre:Math.round(RM.sr*0.03)+x.length};
+    else RM.noise = rms<RM.noise ? 0.9*RM.noise+0.1*rms : 0.995*RM.noise+0.005*rms;
+  } else if(RM.total>=RM.capture.need){
+    const len=Math.round(RM.sr*2.5)+RM.capture.pre, out=new Float32Array(len);
+    for(let i=0;i<len;i++) out[i]=RM.ring[(RM.w-len+i+N)%N];
+    RM.capture=null; RM.lastCap=RM.total; RM.analysing=true;
+    setBand('b-rm',{label:'Analysing…'});
+    setTimeout(()=>{ handleClap(out); RM.analysing=false; },30);
+  }
+  for(let i=0;i<e.outputBuffer.numberOfChannels;i++) e.outputBuffer.getChannelData(i).fill(0);
+}
+function handleClap(x){
+  const r=analyzeClap(x,RM.sr);
+  if(!r){ $('rmStatus').innerHTML='<b>That clap was too quiet or too short to measure.</b> Clap louder, or pop a balloon.'; setBand('b-rm',{state:'alert',label:'Unclear clap'}); setTimeout(()=>{ if(RM.on) setBand('b-rm',{state:'rec',label:'Listening · clap again'}); },1500); return; }
+  r.n=++RM.n; RM.claps.push(r); if(RM.claps.length>5) RM.claps.shift();
+  $('rmCsv').disabled=false; $('rmUndo').disabled=false;
+  if(RM.on) setBand('b-rm',{state:'rec',label:`Clap ${r.n} done · clap again or stop`});
+  { const A=rmAvg(); if(A) kitNote('room',`RT60 ${A.rt.toFixed(2)} s · ${A.n} clap${A.n===1?'':'s'}`); }
+  renderRoom();
+}
+$('rmUndo').addEventListener('click',()=>{ RM.claps.pop(); if(!RM.claps.length) $('rmUndo').disabled=true; renderRoom(); });
+$('rmClear').addEventListener('click',()=>{ RM.claps=[]; $('rmUndo').disabled=true; $('rmCsv').disabled=true; renderRoom(); });
+function roomFrame(){
+  if(!RM.on) return;
+  const pos=v=>clamp((v+80)/80,0,1)*100;
+  $('rmLevel').style.width=pos(20*Math.log10(Math.max(RM.lvl,1e-5)))+'%';
+  $('rmTrig').style.left=pos(20*Math.log10(Math.max(RM.noise*12,0.02)))+'%';
+  bandProgress('b-rm', RM.capture ? 1-(RM.capture.need-RM.total)/(RM.sr*2.5) : RM.analysing ? 'indef' : null);
+  if(RM.capture) setBand('b-rm',{label:'Capturing the echo · stay quiet'});
+  requestAnimationFrame(roomFrame);
+}
+function rmAvg(){
+  const C=RM.claps; if(!C.length) return null;
+  const mean=a=>{ const v=a.filter(x=>x!=null && isFinite(x)); return v.length? v.reduce((p,q)=>p+q,0)/v.length : null; };
+  const bands={}; RM_BANDS.forEach(f=>bands[f]=mean(C.map(c=>c.bands[f]&&c.bands[f].t20&&c.bands[f].t20.rt)));
+  const rt=mean(C.map(c=>c.rtMid));
+  const sd= C.length>1 ? Math.sqrt(C.reduce((p,c)=>p+(c.rtMid-rt)**2,0)/(C.length-1)) : null;
+  return {rt, sd, edt:mean(C.map(c=>c.edt)), c50:mean(C.map(c=>c.c50)), bands, n:C.length};
+}
+function renderRoom(){
+  const lim=RM_LIM[RM.room], A=rmAvg(), last=RM.claps[RM.claps.length-1];
+  if(A){
+    const over = lim.t!=null && A.rt>lim.t;
+    setBand('b-rm',{state: RM.on? 'rec' : over?'alert':'done', num:A.rt.toFixed(2)});
+    if(!RM.on) setBand('b-rm',{label:`${A.n} clap${A.n===1?'':'s'} · ${lim.name}`});
+    $('rmEdt').textContent=A.edt!=null?A.edt.toFixed(2):'–'; $('rmC50').textContent=A.c50!=null?(A.c50>=0?'+':'')+A.c50.toFixed(1):'–'; $('rmN').textContent=A.n;
+    const clar = A.c50==null ? '' : A.c50>=0 ? ' Speech should come across clearly (C50 above 0 dB).' : ' Speech will sound muddy (C50 below 0 dB).';
+    $('rmMeaning').innerHTML = lim.t==null ? `${verdictHTML('', 'RT60 '+A.rt.toFixed(2)+' s')} <span style="display:block;margin-top:6px">${A.sd!=null?'± '+A.sd.toFixed(2)+' s over '+A.n+' claps.':'Clap 2 to 4 more times for an average.'}${clar}</span>`
+      : over ? `${verdictHTML('fail','Too echoey')} <span style="display:block;margin-top:6px">${A.rt.toFixed(2)} s against a ${lim.t} s limit (ANSI S12.60).${clar}</span>`
+             : `${verdictHTML('pass','Within the limit')} <span style="display:block;margin-top:6px">${A.rt.toFixed(2)} s against a ${lim.t} s limit (ANSI S12.60).${clar}</span>`;
+    // octave bars on one fixed scale
+    const mx=Math.max(1.2,...Object.values(A.bands).filter(v=>v), lim.t||0)*1.15;
+    $('rmBands').innerHTML=RM_BANDS.map(f=>{ const v=A.bands[f], bad= v!=null && lim.t!=null && v>lim.t;
+      return `<div class="rtb"><span class="t">${f>=1000?(f/1000)+'k':f} Hz</span><span class="tr">${v!=null?`<span class="f" style="width:${(v/mx*100).toFixed(1)}%;background:${bad?css('--alert'):css('--ink')}"></span>`:''}${lim.t!=null?`<span class="lim" style="left:calc(${(lim.t/mx*100).toFixed(1)}% - 1px)"></span>`:''}</span><span class="v">${v!=null?v.toFixed(2)+' s':'n/a'}</span></div>`; }).join('');
+    // Sabine fix
+    const V=(+$('rmL').value||0)*(+$('rmW').value||0)*(+$('rmH').value||0);
+    if(V>0 && lim.t!=null){
+      const Anow=0.161*V/A.rt, Aneed=0.161*V/lim.t, dA=Aneed-Anow;
+      $('rmFix').innerHTML = dA>0 ? `Room volume ${V.toFixed(0)} m³${V>566?' (bigger than a classroom; treat as a hall)':''}. It has about <b>${Anow.toFixed(0)} m²</b> of absorption now and needs <b>${Aneed.toFixed(0)} m²</b>. Add about <b>${(dA/0.8).toFixed(0)} m²</b> of acoustic panels (α ≈ 0.8) on the ceiling or the back wall.`
+        : `Room volume ${V.toFixed(0)} m³. Absorption is about ${Anow.toFixed(0)} m², already enough for ${lim.t} s. No treatment needed.`;
+    } else $('rmFix').textContent = lim.t==null ? 'Pick Classroom or Large class to compare with a limit.' : 'Enter the room size.';
+  } else {
+    if(!RM.on) setBand('b-rm',{state:'idle',label:'Ready',num:'–'});
+    $('rmBands').innerHTML='<p class="cap">No claps yet.</p>'; $('rmFix').textContent='Clap first.';
+    ['rmEdt','rmC50'].forEach(id=>$(id).textContent='–'); $('rmN').textContent='0';
+  }
+  // decay curve of the last clap, 1 kHz
+  const d=last && last.bands[1000];
+  const tmax=Math.max(0.8, d&&d.t20 ? Math.min(2.4,d.t20.rt*0.75) : 1);
+  const s=[];
+  if(d){ s.push({xs:d.edc.t, ys:d.edc.db.map(v=>Math.max(v,-60)), color:css('--ink'), width:2.2}); if(d.t20) s.push({xs:[0,tmax], ys:[d.t20.a, d.t20.a+d.t20.b*tmax], color:css('--alert'), width:2.5, dash:[6,4]}); }
+  if(lim.t!=null) s.push({xs:[0,tmax], ys:[0,-60*tmax/lim.t], color:css('--muted'), width:1.5, dash:[3,4], ref:true});
+  chart($('rmDecC'),{h:170, empty:'No clap yet · tap Listen, then clap', x:[0,tmax], y:[-50,2], ml:54, xf:v=>v+' s', yf:v=>v+' dB', yt:[-50,-40,-30,-20,-10,0],
+    ybands:[{y0:-25,y1:-5,fill:css('--zone')}], s,
+    labels: d&&d.t20 ? [{x:Math.min(tmax*0.95,d.t20.t1), y:d.t20.a+d.t20.b*d.t20.t1, text:`T20 → ${d.t20.rt.toFixed(2)} s`, dx:6, dy:-6}] : []});
+  $('rmTable').tBodies[0].innerHTML = RM.claps.length ? RM.claps.slice().reverse().map(c=>`<tr><td>${c.n}</td><td class="r">${c.rtMid.toFixed(2)} s</td><td class="r">${c.edt!=null?c.edt.toFixed(2)+' s':'–'}</td><td class="r">${c.c50!=null?c.c50.toFixed(1)+' dB':'–'}</td><td class="r">${Math.round(c.range)} dB${c.range<30?' · low':''}</td></tr>`).join('') : '<tr><td colspan="5" class="cap">No claps yet.</td></tr>';
+}
+$('rmCsv').addEventListener('click',()=>{
+  const A=rmAvg(), L=[`summary,room_type=${RM.room},limit_s=${RM_LIM[RM.room].t??''},rt60_mid_s=${fmt(A&&A.rt,3)},edt_s=${fmt(A&&A.edt,3)},c50_db=${fmt(A&&A.c50,2)},claps=${A?A.n:0}`];
+  L.push('clap,band_hz,rt60_t20_s,edt_s,range_db,c50_db');
+  RM.claps.forEach(c=>RM_BANDS.forEach(f=>{ const b=c.bands[f]; L.push([c.n,f,fmt(b&&b.t20&&b.t20.rt,3),fmt(b&&b.edt&&b.edt.rt,3),fmt(b&&b.range,1),fmt(b&&b.c50,2)].join(',')); }));
+  saveCSV(`room_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   TAP-TONE
+   ============================================================ */
+const TP={ on:false, ctx:null, stream:null, proc:null, ring:null, w:0, total:0, sr:48000, noise:0.002, capture:null, lastCap:-1e9, taps:[], ref:null, lvl:0, n:0 };
+$('tpBtnStop').addEventListener('click',()=>{ if(TP.on) stopTap(); });
+$('tpBtn').addEventListener('click',()=>{
+  if(TP.on){ stopTap(); return; }
+  if(!Busy.take('tap',$('tpStatus'))) return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('tpStatus').innerHTML='<b>This browser has no microphone access.</b>'; Busy.free('tap'); return; }
+  TP.ctx=new AC(); TP.ctx.resume();
+  pending('b-tap',navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})).then(stream=>{
+    TP.stream=stream; TP.sr=TP.ctx.sampleRate;
+    const src=TP.ctx.createMediaStreamSource(stream);
+    TP.proc=TP.ctx.createScriptProcessor(2048,1,1);
+    TP.ring=new Float32Array(Math.round(TP.sr*2.5)); TP.w=0; TP.total=0; TP.capture=null; TP.lastCap=-1e9;
+    TP.proc.onaudioprocess=onAudio;
+    src.connect(TP.proc); TP.proc.connect(TP.ctx.destination);
+    TP.on=true; keepAwake(true); setGo($('tpBtn'),true,'Listen','Stop listening');
+    setBand('b-tap',{state:'rec',label:'Listening · tap the part'});
+    $('tpStatus').textContent=`Microphone at ${Math.round(TP.sr)} samples/s.`;
+    requestAnimationFrame(tapFrame);
+  }).catch(()=>{ $('tpStatus').innerHTML='<b>Microphone not allowed.</b> Allow it in Safari, or close the tab and open the page again.'; Busy.free('tap'); try{ TP.ctx.close(); }catch(_){} });
+});
+function stopTap(){ bandProgress('b-tap',null);
+  TP.on=false; Busy.free('tap'); keepAwake(false); setGo($('tpBtn'),false,'Listen','Stop listening');
+  try{ TP.proc.disconnect(); TP.stream.getTracks().forEach(t=>t.stop()); TP.ctx.close(); }catch(e){}
+  setBand('b-tap',{state: TP.taps.length?'done':'idle', label: TP.taps.length?'Last tap':'Ready'});
+}
+function onAudio(e){
+  const x=e.inputBuffer.getChannelData(0), N=TP.ring.length;
+  let s2=0; for(let i=0;i<x.length;i++){ TP.ring[TP.w]=x[i]; TP.w=(TP.w+1)%N; s2+=x[i]*x[i]; }
+  TP.total+=x.length;
+  const rms=Math.sqrt(s2/x.length); TP.lvl=rms;
+  const trig=Math.max(TP.noise*6, 0.01);
+  if(!TP.capture){
+    if(rms>trig && TP.total-TP.lastCap>TP.sr*1.5) TP.capture={need:TP.total+Math.round(TP.sr*1.2), pre:Math.round(TP.sr*0.05)+x.length};
+    else TP.noise = rms<TP.noise ? 0.9*TP.noise+0.1*rms : 0.995*TP.noise+0.005*rms;
+  } else if(TP.total>=TP.capture.need){
+    const len=Math.round(TP.sr*1.2)+TP.capture.pre, out=new Float32Array(len);
+    for(let i=0;i<len;i++) out[i]=TP.ring[(TP.w-len+i+N)%N];
+    TP.capture=null; TP.lastCap=TP.total; TP.analysing=true;
+    setTimeout(()=>{ handleTap(out); TP.analysing=false; },30);
+  }
+  if(e.outputBuffer) for(let i=0;i<e.outputBuffer.numberOfChannels;i++) e.outputBuffer.getChannelData(i).fill(0);
+}
+function handleTap(x){
+  const r=analyzeTap(x,TP.sr);
+  if(!r || r.T60==null){
+    $('tpStatus').innerHTML='<b>That tap was too short or too noisy to measure.</b> Tap once, firmly, close to the mic.';
+    setBand('b-tap',{state:'alert',label:'Unclear tap'});
+    setTimeout(()=>{ if(TP.on) setBand('b-tap',{state:'rec',label:'Listening · tap the part'}); },1500);
+    return;
+  }
+  r.n=++TP.n; r.raw=x;
+  TP.taps.push(r); if(TP.taps.length>20) TP.taps.shift();
+  $('tpRef').disabled=false; $('tpCsv').disabled=false;
+  renderTap();
+  kitNote('tap',`${fmtHz(r.f)} Hz · ζ ${r.zeta.toFixed(4)}`);
+}
+function tapFrame(){
+  if(!TP.on) return;
+  const pos=v=>clamp((v+80)/80,0,1)*100;
+  $('tpLevel').style.width=pos(20*Math.log10(Math.max(TP.lvl,1e-5)))+'%';
+  $('tpTrig').style.left=pos(20*Math.log10(Math.max(TP.noise*6,0.01)))+'%';
+  bandProgress('b-tap', TP.capture ? 1-(TP.capture.need-TP.total)/(TP.sr*1.2) : TP.analysing ? 'indef' : null);
+  requestAnimationFrame(tapFrame);
+}
+function fmtHz(f){ return f>=1000 ? f.toLocaleString('en',{maximumFractionDigits:0}) : f.toFixed(0); }
+function renderTap(){
+  const r=TP.taps[TP.taps.length-1]; if(!r) return;
+  setBand('b-tap',{state: TP.on?'rec':'done', label: TP.on? `Tap ${r.n} · listening`:`Tap ${r.n}`, num: fmtHz(r.f)});
+  $('tpT60').textContent=r.T60.toFixed(2); $('tpZeta').textContent=r.zeta.toFixed(4); $('tpQ').textContent=Math.round(r.Q);
+  $('tpMeaning').innerHTML=`Rings at <b>${fmtHz(r.f)} Hz</b> and dies away in <b>${r.T60.toFixed(2)} s</b> (damping ζ = ${r.zeta.toFixed(4)}).`;
+  chart($('tpSpecC'),{h:170, empty:'No tap yet', x:[Math.log10(80),Math.log10(12000)], y:[-60,5], ml:54,
+    xt:[100,300,1000,3000,10000].map(Math.log10), xf:v=>{ const f=Math.round(10**v); return f>=1000? (f/1000)+'k':f; }, yt:[-60,-40,-20,0], yf:v=>v+' dB',
+    s:[{xs:r.spec.f.map(Math.log10), ys:r.spec.db.map(v=>Math.max(v,-60)), color:css('--ink'), width:1.8}],
+    dots:[{x:Math.log10(r.f), y:0, color:css('--hv'), ring:css('--ink'), r:6}],
+    labels:[{x:Math.log10(r.f), y:0, text:fmtHz(r.f)+' Hz', dx:9, dy:4}]});
+  const tmax=Math.min(r.env.t[r.env.t.length-1]||1, Math.max(0.3, r.fit? r.fit.t1*1.6 : 1));
+  const fitS = r.fit ? [{xs:[r.fit.t0,r.fit.t1], ys:[r.fit.a+r.fit.b*r.fit.t0, r.fit.a+r.fit.b*r.fit.t1], color:css('--alert'), width:2.5, dash:[6,4]}] : [];
+  chart($('tpDecC'),{h:160, x:[0,tmax], y:[-60,5], ml:54, yt:[-60,-40,-20,0], yf:v=>v+' dB', xf:v=>v+' s',
+    s:[{xs:r.env.t, ys:r.env.db.map(v=>Math.max(v,-60)), color:css('--ink'), width:1.8}].concat(fitS),
+    labels: r.fit? [{x:r.fit.t1, y:r.fit.a+r.fit.b*r.fit.t1, text:`${Math.round(r.D)} dB/s`, dx:8, dy:-4}] : []});
+  $('tpTable').tBodies[0].innerHTML=TP.taps.slice(-6).reverse().map(t=>`<tr><td>${t.n}${TP.ref===t?' · ref':''}</td><td class="r">${fmtHz(t.f)}</td><td class="r">${t.T60.toFixed(2)}</td><td class="r">${t.zeta.toFixed(4)}</td></tr>`).join('');
+  renderTapCmp();
+}
+function renderTapCmp(){
+  const ref=TP.ref, r=TP.taps[TP.taps.length-1];
+  if(!ref){ $('tpCmp').innerHTML=''; return; }
+  if(!r || r===ref){ $('tpCmp').innerHTML=`<div class="callout">Reference saved: <b>${fmtHz(ref.f)} Hz</b>, ζ = ${ref.zeta.toFixed(4)}. Now tap the part you want to check.</div>`; return; }
+  const df=(r.f-ref.f)/ref.f*100, dz=r.zeta/ref.zeta, differs=Math.abs(df)>3 || dz>1.5;
+  const mx=Math.max(ref.f,r.f)*1.1, mz=Math.max(ref.zeta,r.zeta)*1.1;
+  const bar=(lab,v,m,cls,txt)=>`<div class="bar"><span class="t">${lab}</span><span class="track"><span class="f ${cls}" style="width:${Math.max(1,v/m*72)}%"></span><span>${txt}</span></span></div>`;
+  $('tpCmp').innerHTML=`<div class="pair"><div class="lab">Ringing frequency<span>${df>=0?'+':''}${df.toFixed(1)}%</span></div>${bar('Ref',ref.f,mx,'base',fmtHz(ref.f)+' Hz')}${bar('This',r.f,mx,'now',fmtHz(r.f)+' Hz')}</div>
+    <div class="pair"><div class="lab">Damping ζ<span>${dz.toFixed(2)}×</span></div>${bar('Ref',ref.zeta,mz,'base',ref.zeta.toFixed(4))}${bar('This',r.zeta,mz,'now',r.zeta.toFixed(4))}</div>
+    <div class="callout">${differs? verdictHTML('fail','Differs from reference') : verdictHTML('pass','Matches reference')}<div style="margin-top:6px">${differs?'A frequency shift over 3 % or damping over 1.5× is worth a closer look: a crack, a loose joint, or a different support.':'Frequency within 3 % and damping within 1.5× of the sound part.'}</div></div>`;
+}
+$('tpRef').addEventListener('click',()=>{ TP.ref=TP.taps[TP.taps.length-1]||null; renderTap(); });
+$('tpClear').addEventListener('click',()=>{ TP.taps=[]; TP.ref=null; $('tpTable').tBodies[0].innerHTML='<tr><td colspan="4" class="cap">No taps yet.</td></tr>'; $('tpCmp').innerHTML=''; $('tpRef').disabled=true; $('tpCsv').disabled=true; });
+$('tpCsv').addEventListener('click',()=>{
+  const L=['tap,frequency_hz,decay_db_per_s,t60_s,damping_ratio,q_factor,is_reference'];
+  TP.taps.forEach(t=>L.push([t.n,fmt(t.f,1),fmt(t.D,1),fmt(t.T60,3),fmt(t.zeta,5),fmt(t.Q,0),TP.ref===t?'yes':''].join(',')));
+  const last=TP.taps[TP.taps.length-1];
+  if(last){ L.push(''); L.push(`last_tap_time_s,amplitude (sample rate ${Math.round(last.sr)}; every 4th sample)`); for(let i=0;i<last.raw.length;i+=4) L.push(`${fmt(i/last.sr,5)},${fmt(last.raw[i],5)}`); }
+  saveCSV(`taptone_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   LIFT
+   ============================================================ */
+const LF={ on:false, phase:'idle', cal:[], g0:9.81, lp:0, t:[], a:[], vLive:0, stillMs:0, res:null, t0:0, tPrev:0, recT0:0 };
+Motion.subs.add(s=>{
+  if(!LF.on) return;
+  const m=Math.hypot(s.x,s.y,s.z), t=s.t-LF.t0;
+  if(LF.phase==='cal'){
+    LF.cal.push(m);
+    if(t>2000){ LF.g0=LF.cal.reduce((a,b)=>a+b,0)/LF.cal.length; LF.phase='rec'; LF.lp=0; LF.tPrev=t; LF.recT0=t; }
+    return;
+  }
+  const dt=Math.min(0.2,(t-LF.tPrev)/1000); LF.tPrev=t;
+  LF.lp+=(dt/(0.05+dt))*((m-LF.g0)-LF.lp);
+  LF.t.push(t-LF.recT0); LF.a.push(LF.lp);
+  LF.vLive+=LF.lp*dt;
+});
+$('lfBtnStop').addEventListener('click',()=>{ if(LF.on) stopLift(); });
+$('lfBtn').addEventListener('click',()=>{
+  if(LF.on){ stopLift(); return; }
+  if(!Busy.take('lift',$('lfStatus'))) return;
+  const perm=Motion.ask();
+  Object.assign(LF,{on:true, phase:'cal', cal:[], t:[], a:[], vLive:0, stillMs:0, res:null, t0:performance.now()});
+  keepAwake(true); setGo($('lfBtn'),true,'Start lift ride','Stop'); $('lfCsv').disabled=true;
+  setBand('b-lift',{state:'rec',label:'Calibrating · hold still',num:'–',unit:'m/s²<br>vertical'});
+  ['lfH','lfV','lfF','lfA','lfJ','lfT2'].forEach(id=>$(id).textContent='–');
+  $('lfStatus').textContent='';
+  pending('b-lift',perm).then(()=>{ watchForData($('lfStatus')); liftFrame(); }).catch(e=>{ $('lfStatus').innerHTML='<b>'+e.message+'</b>'; stopLift(); });
+});
+function stopLift(){ bandProgress('b-lift',null);
+  LF.on=false; Busy.free('lift'); keepAwake(false); setGo($('lfBtn'),false,'New lift ride','Stop');
+  LF.res=analyzeLift(LF.t,LF.a);
+  $('lfCsv').disabled=!LF.res;
+  if(!LF.res) setBand('b-lift',{state:'alert',label:'Too short to measure'});
+  else kitNote('lift',`${Math.abs(LF.res.travel).toFixed(1)} m ${LF.res.travel>=0?'up':'down'} · ${LF.res.vmax.toFixed(2)} m/s`);
+  renderLift();
+}
+$('lfFloor').addEventListener('input',()=>renderLift());
+function liftFrame(){ if(!LF.on) return; renderLift(); setTimeout(()=>requestAnimationFrame(liftFrame),80); }
+function renderLift(){
+  const tEnd=LF.t.length? LF.t[LF.t.length-1]/1000 : 0, tmax=Math.max(10,Math.ceil(tEnd));
+  if(LF.on && LF.phase==='cal'){ bandProgress('b-lift', clamp((performance.now()-LF.t0)/2000,0,1)); return; }
+  bandProgress('b-lift',null);
+  if(LF.on){
+    const a=LF.a[LF.a.length-1]||0;
+    setBand('b-lift',{state:'rec',label:`Recording ${fmtClock(tEnd*1000)} · ${a>0.05?'pushing up':a<-0.05?'pulling down':'steady'}`, num:(a>=0?'+':'')+a.toFixed(2), unit:'m/s²<br>vertical'});
+    $('lfV').textContent=Math.abs(LF.vLive).toFixed(2);
+    $('lfMeaning').textContent='Hold still. Live speed drifts a little and is corrected when you stop.';
+  }
+  const xs=LF.t.map(v=>v/1000), amax=Math.max(0.6,...LF.a.map(Math.abs))*1.15;
+  chart($('lfAC'),{h:120, x:[0,tmax], y:[-amax,amax], ml:44, xf:v=>v+' s', yf:v=>v.toFixed(1), hl:[{y:0,color:css('--muted'),width:1}], s:[{xs, ys:LF.a, color:css('--ink'), width:1.6}]});
+  const res=LF.res;
+  if(!LF.on && res){
+    const fh=+$('lfFloor').value||3.2, floors=Math.abs(res.travel)/fh, up=res.travel>=0;
+    setBand('b-lift',{state:'done',label: up?'Travelled up':'Travelled down', num:Math.abs(res.travel).toFixed(1), unit:'metres<br>'+(up?'up':'down')});
+    $('lfH').textContent=Math.abs(res.travel).toFixed(1); $('lfV').textContent=res.vmax.toFixed(2); $('lfF').textContent=floors.toFixed(1);
+    $('lfA').textContent=res.amax.toFixed(2)+' m/s²'; $('lfJ').textContent=res.jerk.toFixed(2)+' m/s³'; $('lfT2').textContent=res.moving.toFixed(1)+' s';
+    const smooth=res.amax<=1.5 && res.jerk<=2.0;
+    $('lfMeaning').innerHTML=`${smooth?verdictHTML('pass','Within typical comfort'):verdictHTML('fail','Harsher than typical')} <span style="display:block;margin-top:6px">About ${Math.round(floors)} floor${Math.round(floors)===1?'':'s'} ${up?'up':'down'} at up to ${res.vmax.toFixed(2)} m/s.</span>`;
+    const vm=Math.max(0.3,res.vmax)*1.15, hs=res.h, hmin=Math.min(0,...hs), hmx=Math.max(0.5,...hs);
+    chart($('lfVC'),{h:110, x:[0,tmax], y:[-vm,vm], ml:44, xf:v=>v+' s', yf:v=>v.toFixed(1), hl:[{y:0,color:css('--muted'),width:1}], s:[{xs, ys:res.v, color:css('--ink'), width:2}]});
+    chart($('lfHC'),{h:110, x:[0,tmax], y:[hmin-0.5,hmx+0.5], ml:44, xf:v=>v+' s', yf:v=>v.toFixed(0)+' m', s:[{xs, ys:hs, color:css('--ink'), width:2.5}],
+      labels:[{x:xs[xs.length-1]||0, y:hs[hs.length-1]||0, text:`${up?'+':''}${res.travel.toFixed(1)} m`, align:'right', dx:-4, dy:-6}]});
+  } else {
+    chart($('lfVC'),{h:110, x:[0,tmax], y:[-1,1], ml:44, xf:v=>v+' s', yf:v=>v.toFixed(1), hl:[{y:0,color:css('--muted'),width:1}]});
+    chart($('lfHC'),{h:110, x:[0,tmax], y:[0,10], ml:44, xf:v=>v+' s', yf:v=>v+' m'});
+  }
+}
+$('lfCsv').addEventListener('click',()=>{
+  const r=LF.res; if(!r) return;
+  const L=['time_s,vertical_accel_ms2,speed_ms,height_m'];
+  LF.t.forEach((t,i)=>L.push([fmt(t/1000,3),fmt(LF.a[i],4),fmt(r.v[i],4),fmt(r.h[i],4)].join(',')));
+  saveCSV(`lift_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   PENDULUM
+   ============================================================ */
+const PD={ on:false, t:[], w:[[],[],[]], an:null, res:null, t0:0, ax:0 };
+Motion.subs.add(s=>{ if(!PD.on) return; PD.t.push((s.t-PD.t0)/1000); PD.w[0].push(s.ra); PD.w[1].push(s.rb); PD.w[2].push(s.rg); });
+function pdLen(){ return clamp((+$('pdL').value||50)/100, 0.05, 5); }
+function pdAxis(){
+  let best=0, bv=-1;
+  PD.w.forEach((arr,i)=>{ const n=arr.length; if(!n) return; let m=0; for(const v of arr) m+=v; m/=n; let s=0; for(const v of arr) s+=(v-m)*(v-m); if(s>bv){ bv=s; best=i; } });
+  return best;
+}
+function pdTheory(){ $('pdTheory').textContent=`Theory at g = 9.81: T = ${(2*Math.PI*Math.sqrt(pdLen()/9.81)).toFixed(2)} s`; }
+$('pdL').addEventListener('input',()=>{ pdTheory(); if(PD.an){ PD.res=pendulumResult(PD.an,pdLen()); } renderPend(); });
+$('pdBtnStop').addEventListener('click',()=>{ if(PD.on) stopPend(); });
+$('pdBtn').addEventListener('click',()=>{
+  if(PD.on){ stopPend(); return; }
+  if(!Busy.take('pend',$('pdStatus'))) return;
+  const perm=Motion.ask();
+  Object.assign(PD,{on:true, t:[], w:[[],[],[]], an:null, res:null, t0:performance.now()});
+  keepAwake(true); setGo($('pdBtn'),true,'Start swinging','Stop'); $('pdCsv').disabled=true;
+  setBand('b-pend',{state:'rec',label:'Swing it · counting',num:'–'});
+  $('pdStatus').textContent='';
+  pending('b-pend',perm).then(()=>{ watchForData($('pdStatus')); pendFrame(0); }).catch(e=>{ $('pdStatus').innerHTML='<b>'+e.message+'</b>'; stopPend(); });
+});
+function analysePend(){ PD.ax=pdAxis(); PD.an=analyzePendulum(PD.t, PD.w[PD.ax]); PD.res=pendulumResult(PD.an,pdLen()); }
+function stopPend(){ bandProgress('b-pend',null); PD.on=false; Busy.free('pend'); keepAwake(false); setGo($('pdBtn'),false,'Swing again','Stop'); analysePend(); $('pdCsv').disabled=!PD.t.length; if(!PD.res) setBand('b-pend',{state:'alert',label:'Not enough swings'}); else kitNote('pend',`g = ${PD.res.g.toFixed(2)} m/s² · ${PD.res.n} swings`); renderPend(); }
+let pdLast=0;
+function pendFrame(ts){
+  if(!PD.on) return;
+  if(!ts || ts-pdLast>500){ pdLast=ts||0; analysePend(); }
+  renderPend(); setTimeout(()=>requestAnimationFrame(pendFrame),60);
+}
+function renderPend(){
+  const r=PD.res, an=PD.an, Tth=2*Math.PI*Math.sqrt(pdLen()/9.81);
+  if(r){
+    const err=(r.g-9.81)/9.81*100;
+    setBand('b-pend',{state: PD.on?'rec':'done', label: PD.on? `Swinging · ${r.n} swings` : `${r.n} swings`, num:r.g.toFixed(2)});
+    $('pdPer').textContent=r.T.toFixed(3); $('pdN').textContent=r.n; $('pdAmp').textContent=r.th0Deg.toFixed(0);
+    $('pdMeaning').innerHTML=`${verdictHTML(Math.abs(err)<=2?'pass':'', 'g = '+r.g.toFixed(2)+' m/s²')} <span style="display:block;margin-top:6px">${Math.abs(err).toFixed(1)} % ${err>=0?'above':'below'} 9.81, from a ${r.T.toFixed(3)} s period over ${r.n} swings${r.th0Deg>15?'. Swing smaller (under 15°) for a cleaner number.':'.'}</span>`;
+    $('pdDamp').textContent = r.zeta!=null ? `Logarithmic decrement δ = ${r.delta.toFixed(4)} per swing · damping ratio ζ = ${r.zeta.toFixed(5)}.` : 'Needs 4 swings for the damping fit.';
+  } else if(PD.on){
+    setBand('b-pend',{label: an && an.crossings.length>1 ? `Swinging · ${an.crossings.length-1} swing${an.crossings.length===2?'':'s'}` : 'Swing it · counting'});
+  }
+  const ax=PD.ax, tEnd=PD.t.length? PD.t[PD.t.length-1] : 0, t0=Math.max(0,tEnd-20);
+  const xs=[], ys=[]; let mx=30;
+  for(let i=0;i<PD.t.length;i++) if(PD.t[i]>=t0){ xs.push(PD.t[i]-tEnd); ys.push(PD.w[ax][i]); mx=Math.max(mx,Math.abs(PD.w[ax][i])); }
+  chart($('pdTraceC'),{h:150, x:[-20,0], y:[-mx*1.1,mx*1.1], ml:44, xf:v=>v===0?'now':v+' s', yf:v=>v.toFixed(0), hl:[{y:0,color:css('--muted'),width:1}], s:[{xs,ys,color:css('--ink'),width:1.6}]});
+  const per=an? an.periods : [], pmin=Math.min(Tth*0.9,...per), pmax=Math.max(Tth*1.1,...per), nx=Math.max(10,per.length+1);
+  chart($('pdPerC'),{h:130, x:[0,nx], y:[pmin,pmax], ml:44, xf:v=>v===0?'':'#'+v, yf:v=>v.toFixed(2),
+    hl:[{y:Tth,color:css('--ink'),dash:[6,4],width:2}],
+    dots:per.map((p,i)=>({x:i+1,y:p,color:css('--hv'),ring:css('--ink'),r:6})),
+    labels:[{x:nx,y:Tth,text:`theory ${Tth.toFixed(2)} s`,align:'right',dx:-4,dy:-6}]});
+  const pk=an? an.peaks : [], pm=Math.max(30,...pk)*1.15, nk=Math.max(10,pk.length+1);
+  const fit = r && r.fitA ? [{xs:pk.map((_,i)=>i+1), ys:pk.map((_,i)=>r.fitA*Math.exp(r.fitB*i)), color:css('--alert'), width:2.5, dash:[6,4]}] : [];
+  chart($('pdDecC'),{h:130, x:[0,nk], y:[0,pm], ml:44, xf:v=>v===0?'':'#'+v, yf:v=>v.toFixed(0), s:fit, dots:pk.map((p,i)=>({x:i+1,y:p,color:css('--ink'),ring:css('--card'),r:5}))});
+}
+$('pdCsv').addEventListener('click',()=>{
+  const L=['time_s,rate_alpha_dps,rate_beta_dps,rate_gamma_dps'];
+  PD.t.forEach((t,i)=>L.push([fmt(t,3),fmt(PD.w[0][i],3),fmt(PD.w[1][i],3),fmt(PD.w[2][i],3)].join(',')));
+  if(PD.res){ L.push(''); L.push(`summary,length_m=${fmt(pdLen(),3)},period_s=${fmt(PD.res.T,4)},g_ms2=${fmt(PD.res.g,3)},swings=${PD.res.n},zeta=${fmt(PD.res.zeta,6)}`); }
+  saveCSV(`pendulum_${stamp()}.csv`, L.join('\n'));
+});
+
+/* ============================================================
+   ROUTER AND START-UP
+   ============================================================ */
+const SCREENS=['kit','ride','comfort','drive','op','noise','room','tap','lift','pend'];
+function route(keep){
+  const id=(location.hash||'#kit').slice(1), sc=SCREENS.includes(id)?id:'kit';
+  SCREENS.forEach(s=>$(s).classList.toggle('on',s===sc));
+  if(keep!==true) window.scrollTo(0,0);
+  if(sc==='kit') buildKit(), Busy.paint();
+  if(sc==='ride'){ ensureMap(); if(map) setTimeout(()=>map.invalidateSize(),60); renderTrace(); }
+  if(sc==='op'){ renderTremor(); renderRT(); }
+  if(sc==='comfort') renderComfort(true);
+  if(sc==='drive') renderDrive(true);
+  if(sc==='noise') renderNoise();
+  if(sc==='room') renderRoom();
+  if(sc==='tap') renderTap();
+  if(sc==='lift') renderLift();
+  if(sc==='pend') renderPend();
+}
+window.addEventListener('hashchange',route);
+(function init(){
+  if(!window.isSecureContext) $('secureWarn').classList.remove('hide');
+  buildKit(); setupDocks(); paintRamps(); paintChrome();
+  document.querySelectorAll('.theme button').forEach(b=>{ b.setAttribute('aria-pressed',String(b.dataset.theme===document.documentElement.dataset.palette)); b.addEventListener('click',()=>setTheme(b.dataset.theme)); });
+  pdTheory(); renderCompare();
+  let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>route(true),150); });
+  route();
+})();
+</script>
+</body>
+</html>
